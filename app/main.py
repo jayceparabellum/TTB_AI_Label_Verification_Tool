@@ -10,10 +10,12 @@ from __future__ import annotations
 import base64
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 
 from . import batch as batch_mod
 from . import ocr
@@ -24,7 +26,31 @@ from .verify import UNREADABLE_MESSAGE, reverify_text, verify_label
 
 BASE_DIR = Path(__file__).parent
 
+# 10 MB — generous for a phone photo, blocks multi-GB abuse.
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
 app = FastAPI(title="TTB Label Verification", docs_url=None, redoc_url=None)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Attach standard hardening headers to every response."""
+
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=()"
+        )
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; img-src 'self' data:; style-src 'self'"
+        )
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
@@ -157,7 +183,9 @@ async def verify(
     alcohol_content: str = Form(...),
     expected_warning: str = Form(OFFICIAL_GOVERNMENT_WARNING),
 ):
-    image_bytes = await label_image.read()
+    image_bytes = await label_image.read(MAX_UPLOAD_BYTES + 1)
+    if len(image_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Upload exceeds 10 MB limit.")
     warning = expected_warning or OFFICIAL_GOVERNMENT_WARNING
     result = verify_label(
         image_bytes, brand=brand, alcohol_content=alcohol_content, expected_warning=warning
