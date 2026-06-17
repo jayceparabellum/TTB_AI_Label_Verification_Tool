@@ -12,3 +12,4 @@ dist/
 build/
 .DS_Store
 eval/images/
+.claude/settings.local.json
