@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Result — TTB Label Verification</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="container">
+    <a class="back" href="/">&larr; Check another label</a>
+
+    {% if error %}
+      <div class="banner banner-flag"><h1>{{ error }}</h1></div>
+    {% elif result and not result.readable %}
+      <div class="banner banner-unreadable">
+        <h1>Couldn't read this image</h1>
+        <p>{{ result.message }}</p>
+      </div>
+    {% else %}
+      {% if result.overall_pass %}
+        <div class="banner banner-pass">
+          <h1>PASS &mdash; everything matches</h1>
+          <p>All {{ result.fields|length }} checks passed in {{ result.elapsed_ms }} ms.</p>
+        </div>
+      {% else %}
+        <div class="banner banner-flag">
+          <h1>FLAGGED &mdash; {{ result.flagged_count }} issue(s)</h1>
+          <p>Reviewed in {{ result.elapsed_ms }} ms. See the details below.</p>
+        </div>
+      {% endif %}
+
+      <div class="results">
+        {% for f in result.fields %}
+        <div class="result-card {{ 'pass' if f.passed else 'flag' }}">
+          <div class="result-head">
+            <span class="badge">{{ 'PASS' if f.passed else 'FLAG' }}</span>
+            <span class="result-name">{{ f.label }}</span>
+          </div>
+          <dl class="result-detail">
+            <dt>Application says</dt><dd>{{ f.expected }}</dd>
+            <dt>On the label</dt><dd>{{ f.found }}</dd>
+          </dl>
+          {% if f.detail %}<p class="result-note">{{ f.detail }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <details class="advanced">
+        <summary>Raw text read from the label</summary>
+        <pre class="ocr">{{ result.ocr_text }}</pre>
+      </details>
+    {% endif %}
+  </main>
+</body>
+</html>

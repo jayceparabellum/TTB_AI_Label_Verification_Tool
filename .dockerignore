@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+tests/
+eval/
+docs/
+*.md
+PVD.md
+PRD-v1.md
+.git/
+.gitignore
