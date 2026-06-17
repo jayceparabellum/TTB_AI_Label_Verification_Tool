@@ -20,6 +20,19 @@ UNREADABLE_MESSAGE = (
 )
 
 
+def _elapsed_ms(start: float) -> int:
+    return int((time.perf_counter() - start) * 1000)
+
+
+def _unreadable_result(start: float, ocr_text: str = "") -> VerificationResult:
+    return VerificationResult(
+        readable=False,
+        elapsed_ms=_elapsed_ms(start),
+        message=UNREADABLE_MESSAGE,
+        ocr_text=ocr_text,
+    )
+
+
 def _needs_review(confidence: float, fields: list[FieldResult]) -> bool:
     """Defer to a human when the read is marginal OR a field couldn't be assessed.
 
@@ -28,6 +41,7 @@ def _needs_review(confidence: float, fields: list[FieldResult]) -> bool:
     block is unreadable even though the rest of the label scanned fine, which the
     global mean confidence would otherwise miss)."""
     return confidence < ocr.OCR_CONFIDENCE_THRESHOLD or any(f.inconclusive for f in fields)
+
 
 
 def verify_fields(
@@ -67,7 +81,7 @@ def reverify_text(
     return VerificationResult(
         readable=True,
         fields=fields,
-        elapsed_ms=int((time.perf_counter() - start) * 1000),
+        elapsed_ms=_elapsed_ms(start),
         ocr_text=text,
         confidence=confidence,
         needs_review=_needs_review(confidence, fields),
@@ -86,28 +100,17 @@ def verify_label(
     try:
         text, confidence = ocr.extract_text_data(image_bytes)
     except ocr.OcrReadError:
-        # Undecodable/corrupt/oversized upload (e.g. a HEIC photo or a PDF).
-        return VerificationResult(
-            readable=False,
-            elapsed_ms=int((time.perf_counter() - start) * 1000),
-            message=UNREADABLE_MESSAGE,
-            ocr_text="",
-        )
+        return _unreadable_result(start)
 
     if not ocr.is_readable(text):
-        return VerificationResult(
-            readable=False,
-            elapsed_ms=int((time.perf_counter() - start) * 1000),
-            message=UNREADABLE_MESSAGE,
-            ocr_text=text,
-        )
+        return _unreadable_result(start, ocr_text=text)
 
     fields = verify_fields(text, brand, alcohol_content, expected_warning)
 
     return VerificationResult(
         readable=True,
         fields=fields,
-        elapsed_ms=int((time.perf_counter() - start) * 1000),
+        elapsed_ms=_elapsed_ms(start),
         ocr_text=text,
         confidence=confidence,
         needs_review=_needs_review(confidence, fields),

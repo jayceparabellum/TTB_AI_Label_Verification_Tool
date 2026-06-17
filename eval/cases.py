@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.samples import SAMPLES
+
 
 @dataclass(frozen=True)
 class EvalCase:
@@ -28,14 +30,27 @@ class EvalCase:
     exp_warning: bool
 
 
-# The three bundled synthetic samples (ground truth from how they were generated).
+# Per-sample expected verdicts (brand, alcohol, warning).
+_EXPECTED_VERDICTS: dict[str, tuple[bool, bool, bool]] = {
+    "clean_pass": (True, True, True),
+    "abv_mismatch": (True, False, True),
+    "bad_warning": (True, True, False),
+}
+
+# Generate clean cases from the canonical Sample definitions in app/samples.
 CLEAN_CASES = [
-    EvalCase("clean_pass", "app/static/samples/clean_pass.png",
-             "Stone's Throw", "5.0", "clean", True, True, True),
-    EvalCase("abv_mismatch", "app/static/samples/abv_mismatch.png",
-             "Stone's Throw", "5.0", "clean", True, False, True),
-    EvalCase("bad_warning", "app/static/samples/bad_warning.png",
-             "Stone's Throw", "5.0", "clean", True, True, False),
+    EvalCase(
+        name=sample.key,
+        image=str(sample.path),
+        brand=sample.brand,
+        alcohol_content=sample.alcohol_content,
+        kind="clean",
+        exp_brand=verdicts[0],
+        exp_alcohol=verdicts[1],
+        exp_warning=verdicts[2],
+    )
+    for sample in SAMPLES.values()
+    if (verdicts := _EXPECTED_VERDICTS.get(sample.key)) is not None
 ]
 
 # Degraded variants are generated from clean_pass (a fully-compliant label),

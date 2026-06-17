@@ -11,29 +11,37 @@ Run:  python scripts/generate_samples.py
 
 from __future__ import annotations
 
+import sys
 import textwrap
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+# Ensure the repo root is on sys.path so ``app`` is importable when this script
+# is executed directly (python scripts/generate_samples.py).
+_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ROOT))
 
-OUT_DIR = Path(__file__).resolve().parent.parent / "app" / "static" / "samples"
+from PIL import Image, ImageDraw, ImageFont  # noqa: E402
+
+from app.reference import OFFICIAL_GOVERNMENT_WARNING  # noqa: E402
+from app.samples import SAMPLES, SAMPLES_DIR  # noqa: E402
+
 FONT_DIR = Path("/usr/share/fonts/truetype/dejavu")
 
-OFFICIAL_WARNING = (
-    "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not "
-    "drink alcoholic beverages during pregnancy because of the risk of birth "
-    "defects. (2) Consumption of alcoholic beverages impairs your ability to "
-    "drive a car or operate machinery, and may cause health problems."
-)
 # Same wording, but Title Case header + sentence case body -> must FAIL strict.
-TITLECASE_WARNING = (
-    "Government Warning: (1) According to the Surgeon General, women should not "
-    "drink alcoholic beverages during pregnancy because of the risk of birth "
-    "defects. (2) Consumption of alcoholic beverages impairs your ability to "
-    "drive a car or operate machinery, and may cause health problems."
+TITLECASE_WARNING = OFFICIAL_GOVERNMENT_WARNING.replace(
+    "GOVERNMENT WARNING:", "Government Warning:"
 )
 
 W, H = 1000, 700
+
+# Rendering specs that are unique to image generation: the ABV text drawn on the
+# label and which warning variant to render.  Brand and filename come from the
+# canonical Sample definitions in app/samples.
+LABEL_SPECS: dict[str, tuple[str, str]] = {
+    "clean_pass": ("ALC 5.0% BY VOL", OFFICIAL_GOVERNMENT_WARNING),
+    "abv_mismatch": ("ALC 7.5% BY VOL", OFFICIAL_GOVERNMENT_WARNING),
+    "bad_warning": ("ALC 5.0% BY VOL", TITLECASE_WARNING),
+}
 
 
 def _font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
@@ -59,18 +67,12 @@ def draw_label(brand: str, abv_text: str, warning: str) -> Image.Image:
     return img
 
 
-SAMPLES = {
-    "clean_pass.png": ("Stone's Throw", "ALC 5.0% BY VOL", OFFICIAL_WARNING),
-    "abv_mismatch.png": ("Stone's Throw", "ALC 7.5% BY VOL", OFFICIAL_WARNING),
-    "bad_warning.png": ("Stone's Throw", "ALC 5.0% BY VOL", TITLECASE_WARNING),
-}
-
-
 def main() -> None:
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    for filename, (brand, abv, warning) in SAMPLES.items():
-        draw_label(brand, abv, warning).save(OUT_DIR / filename)
-        print(f"wrote {OUT_DIR / filename}")
+    SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
+    for key, sample in SAMPLES.items():
+        abv_text, warning = LABEL_SPECS[key]
+        draw_label(sample.brand, abv_text, warning).save(sample.path)
+        print(f"wrote {sample.path}")
 
 
 if __name__ == "__main__":

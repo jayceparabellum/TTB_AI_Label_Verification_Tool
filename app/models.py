@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import Dict, List
 
 from .matching import FieldResult
 
@@ -32,3 +32,8 @@ class VerificationResult:
     @property
     def flagged_count(self) -> int:
         return sum(1 for f in self.fields if not f.passed)
+
+    @property
+    def verdicts(self) -> Dict[str, bool]:
+        """Map field name -> passed, e.g. ``{"brand": True, ...}``."""
+        return {f.field: f.passed for f in self.fields}
