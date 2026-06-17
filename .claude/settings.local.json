@@ -37,7 +37,15 @@
       "Bash(cd *)",
       "Bash(.venv/bin/pip install *)",
       "Bash(.venv/bin/python -m pytest -q)",
-      "Bash(.venv/bin/python eval/run_eval.py)"
+      "Bash(.venv/bin/python eval/run_eval.py)",
+      "Bash(command -v cloudflared)",
+      "Bash(echo \"cloudflared: $\\(command -v cloudflared || echo MISSING\\)\")",
+      "Bash(command -v ngrok)",
+      "Bash(echo \"ngrok: $\\(command -v ngrok || echo MISSING\\)\")",
+      "Bash(command -v flyctl fly)",
+      "Bash(nohup .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --log-level warning)",
+      "Bash(echo \"uvicorn pid $!\")",
+      "Bash(curl -s http://127.0.0.1:8000/health)"
     ]
   }
 }
