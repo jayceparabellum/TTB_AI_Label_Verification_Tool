@@ -120,3 +120,27 @@ def extract_text(image_bytes: bytes) -> str:
 def is_readable(text: str) -> bool:
     """True if OCR produced enough text to trust a verdict."""
     return len(re.sub(r"\s", "", text)) >= MIN_READABLE_CHARS
+
+
+# Small thumbnail for display on the results page (NOT used for re-check, so it
+# can be tiny — keeps the results HTML light). Nothing is stored.
+THUMBNAIL_MAX_PX = 400
+
+
+def to_thumbnail_data_uri(image_bytes: bytes) -> str | None:
+    """Return a small JPEG data URI for the label, or None if undecodable."""
+    import base64
+
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        img = ImageOps.exif_transpose(img).convert("RGB")
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+        return None
+    longest = max(img.size)
+    if longest > THUMBNAIL_MAX_PX:
+        scale = THUMBNAIL_MAX_PX / longest
+        img = img.resize((max(1, int(img.width * scale)), max(1, int(img.height * scale))))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=70)
+    b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+    return f"data:image/jpeg;base64,{b64}"

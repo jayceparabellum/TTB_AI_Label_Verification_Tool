@@ -8,7 +8,12 @@
 </head>
 <body>
   <main class="container">
-    <a class="back" href="/">&larr; Check another label</a>
+    <div class="toolbar no-print">
+      <a class="back" href="/">&larr; Check another label</a>
+      {% if result and result.readable %}
+      <button type="button" class="btn-print" onclick="window.print()">🖨 Print / Save</button>
+      {% endif %}
+    </div>
 
     {% if error %}
       <div class="banner banner-flag"><h1>{{ error }}</h1></div>
@@ -30,6 +35,13 @@
         </div>
       {% endif %}
 
+      {% if image_src %}
+      <figure class="label-thumb">
+        <img src="{{ image_src }}" alt="The label that was checked">
+        <figcaption>The label you checked</figcaption>
+      </figure>
+      {% endif %}
+
       <div class="results">
         {% for f in result.fields %}
         <div class="result-card {{ 'pass' if f.passed else 'flag' }}">
@@ -46,10 +58,30 @@
         {% endfor %}
       </div>
 
-      <details class="advanced">
+      {% if ocr_text %}
+      <form class="recheck no-print" action="/reverify" method="post">
+        <h2>Fix the application data and re-check</h2>
+        <p class="hint">Correct a typo in the claimed values and re-check the same
+          label &mdash; no need to upload again.</p>
+        <label class="field">
+          <span class="field-label">Brand name</span>
+          <input type="text" name="brand" value="{{ brand }}" required>
+        </label>
+        <label class="field">
+          <span class="field-label">Alcohol content (ABV %)</span>
+          <input type="text" name="alcohol_content" value="{{ alcohol_content }}" required>
+        </label>
+        <input type="hidden" name="ocr_text" value="{{ ocr_text }}">
+        <input type="hidden" name="image_src" value="{{ image_src or '' }}">
+        <input type="hidden" name="expected_warning" value="{{ expected_warning }}">
+        <button type="submit" class="btn-secondary">Re-check</button>
+      </form>
+
+      <details class="advanced no-print">
         <summary>Raw text read from the label</summary>
         <pre class="ocr">{{ result.ocr_text }}</pre>
       </details>
+      {% endif %}
     {% endif %}
   </main>
 </body>
