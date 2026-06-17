@@ -67,6 +67,17 @@ def test_non_image_upload_returns_friendly_message():
         assert not r.fields
 
 
+def test_oversized_image_rejected_before_decode(monkeypatch):
+    # Guards against decompression bombs: an image over the pixel cap returns
+    # the friendly message instead of decoding it.
+    from app import ocr
+
+    monkeypatch.setattr(ocr, "MAX_PIXELS", 100)  # any real sample exceeds this
+    r = _verify("clean_pass.png")
+    assert r.readable is False
+    assert "couldn't read" in r.message.lower()
+
+
 def test_latency_under_5s_on_each_sample():
     for name in ("clean_pass.png", "abv_mismatch.png", "bad_warning.png"):
         r = _verify(name)

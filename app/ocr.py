@@ -51,7 +51,21 @@ def _configure_local_tesseract() -> None:
         os.environ["TESSDATA_PREFIX"] = str(tessdata.parent)
 
 
-_configure_local_tesseract()
+_configured = False
+
+
+def _ensure_configured() -> None:
+    """Run one-time OCR setup lazily, so importing this module has no global
+    side effects (env vars, pytesseract config). Called on first OCR call.
+    """
+    global _configured
+    if _configured:
+        return
+    _configure_local_tesseract()
+    # On constrained CPUs, Tesseract's OpenMP threads thrash; pin to one.
+    os.environ.setdefault("OMP_THREAD_LIMIT", "1")
+    _configured = True
+
 
 # If the de-whitespaced OCR output has fewer than this many characters, we treat
 # the image as unreadable rather than emitting confidently-wrong FLAGs.
@@ -60,9 +74,17 @@ MIN_READABLE_CHARS = 12
 # Cap the long edge so a huge phone photo doesn't blow the latency budget.
 MAX_EDGE_PX = 2000
 
+# Reject images larger than this (pixels) before decoding them — guards against
+# decompression bombs. 40 MP comfortably covers any real phone/camera photo.
+MAX_PIXELS = 40_000_000
+
 
 def _prepare(image_bytes: bytes) -> Image.Image:
     img = Image.open(io.BytesIO(image_bytes))
+    # The header gives dimensions without decoding the pixels, so we can reject
+    # an oversized/bomb image before paying to decode it.
+    if img.width * img.height > MAX_PIXELS:
+        raise OcrReadError(f"image too large: {img.width}x{img.height} px")
     # Respect EXIF orientation from phone cameras, then flatten to grayscale.
     img = ImageOps.exif_transpose(img)
     img = img.convert("L")
@@ -79,9 +101,6 @@ def _prepare(image_bytes: bytes) -> Image.Image:
 # on CPU-constrained hosts (e.g. small cloud instances).
 _TESS_CONFIG = "--psm 6"
 
-# On constrained CPUs, Tesseract's OpenMP threads thrash; pin to one.
-os.environ.setdefault("OMP_THREAD_LIMIT", "1")
-
 
 def extract_text(image_bytes: bytes) -> str:
     """Return the raw text Tesseract reads from the label image.
@@ -89,6 +108,7 @@ def extract_text(image_bytes: bytes) -> str:
     Raises OcrReadError if the bytes can't be decoded or OCR'd, so the caller
     can return a friendly "couldn't read" result rather than a 500.
     """
+    _ensure_configured()
     try:
         img = _prepare(image_bytes)
         return pytesseract.image_to_string(img, config=_TESS_CONFIG)
