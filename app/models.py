@@ -17,10 +17,17 @@ class VerificationResult:
     elapsed_ms: int = 0
     message: str = ""          # used when the image is unreadable
     ocr_text: str = ""         # raw OCR output, for transparency/debugging
+    confidence: float = 100.0  # mean OCR word confidence (0-100)
+    needs_review: bool = False  # OCR read was marginal -> ask a human
 
     @property
     def overall_pass(self) -> bool:
-        return self.readable and bool(self.fields) and all(f.passed for f in self.fields)
+        return (
+            self.readable
+            and not self.needs_review
+            and bool(self.fields)
+            and all(f.passed for f in self.fields)
+        )
 
     @property
     def flagged_count(self) -> int:

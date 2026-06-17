@@ -78,6 +78,30 @@ def test_oversized_image_rejected_before_decode(monkeypatch):
     assert "couldn't read" in r.message.lower()
 
 
+def test_clean_sample_high_confidence_no_review():
+    r = _verify("clean_pass.png")
+    assert r.confidence > 80
+    assert r.needs_review is False
+
+
+def test_low_confidence_image_needs_review():
+    # A heavily blurred (but still readable) label reads at low confidence and
+    # should ask for a human rather than committing to a hard verdict.
+    from PIL import Image, ImageFilter
+    import io
+
+    blurred = Image.open(SAMPLES / "clean_pass.png").convert("RGB").filter(
+        ImageFilter.GaussianBlur(3.0)
+    )
+    buf = io.BytesIO()
+    blurred.save(buf, format="PNG")
+    r = verify_label(buf.getvalue(), brand="Stone's Throw", alcohol_content="5.0")
+    assert r.readable is True
+    assert r.needs_review is True
+    assert r.confidence < 55
+    assert r.overall_pass is False        # needs_review supersedes PASS
+
+
 def test_latency_under_5s_on_each_sample():
     for name in ("clean_pass.png", "abv_mismatch.png", "bad_warning.png"):
         r = _verify(name)

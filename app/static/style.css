@@ -85,6 +85,8 @@ input:focus, textarea:focus { outline: 3px solid var(--accent); border-color: va
 .banner-pass { background: var(--pass-bg); color: var(--pass); }
 .banner-flag { background: var(--flag-bg); color: var(--flag); }
 .banner-unreadable { background: #fef9c3; color: #854d0e; }
+/* "needs review" — distinct amber, clearly neither pass (green) nor flag (red) */
+.banner-review { background: #ffedd5; color: #9a3412; border: 2px solid #fb923c; }
 
 .results { display: flex; flex-direction: column; gap: 16px; }
 .result-card { border: 2px solid var(--line); border-radius: 12px; padding: 18px; background: #fff; }
@@ -106,3 +108,44 @@ input:focus, textarea:focus { outline: 3px solid var(--accent); border-color: va
 .foot { margin-top: 48px; font-size: 0.9rem; text-align: center; }
 
 @media (min-width: 620px) { .sample-grid { grid-template-columns: 1fr 1fr; } }
+
+/* --- Drag-and-drop upload + preview (U1) --- */
+.dropzone {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  border: 3px dashed var(--line); border-radius: 12px; padding: 24px;
+  text-align: center; cursor: pointer; background: #fafafa;
+}
+.dropzone:hover { border-color: var(--accent); }
+.dropzone.dragging { border-color: var(--accent); background: #eef2ff; }
+.dropzone input[type=file] { width: 100%; }
+.dropzone-text { color: var(--muted); font-weight: 600; }
+.dropzone-preview { max-width: 100%; max-height: 240px; border: 1px solid var(--line); border-radius: 8px; }
+
+/* --- Results: toolbar, thumbnail, re-check (U2-U4) --- */
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
+.btn-print {
+  font-size: 1rem; font-weight: 700; padding: 10px 16px; cursor: pointer;
+  color: var(--accent); background: #fff; border: 2px solid var(--accent); border-radius: 10px;
+}
+.btn-print:hover { background: #eef2ff; }
+.label-thumb { margin: 0 0 24px; text-align: center; }
+.label-thumb img { max-width: 280px; max-height: 220px; border: 1px solid var(--line); border-radius: 8px; }
+.label-thumb figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+.recheck {
+  margin-top: 28px; background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 20px; display: flex; flex-direction: column; gap: 16px;
+}
+.recheck h2 { margin: 0; font-size: 1.2rem; }
+
+/* --- Print: a clean one-page compliance record --- */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; font-size: 12pt; }
+  .container { max-width: 100%; padding: 0; }
+  .banner { border: 2px solid #000; }
+  .banner-pass { color: #000; background: #fff; }
+  .banner-flag { color: #000; background: #fff; }
+  .result-card { break-inside: avoid; border-color: #000; }
+  .label-thumb img { max-height: 180px; }
+  a[href]:after { content: ""; }
+}

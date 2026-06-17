@@ -15,10 +15,14 @@
     </p>
 
     <form class="card" action="/verify" method="post" enctype="multipart/form-data">
-      <label class="field">
+      <div class="field">
         <span class="field-label">1. Label photo</span>
-        <input type="file" name="label_image" accept="image/*" required>
-      </label>
+        <label class="dropzone" id="dropzone">
+          <input type="file" name="label_image" accept="image/*" required id="fileInput">
+          <span class="dropzone-text">Drag a photo here, or click to choose a file</span>
+          <img class="dropzone-preview" id="preview" alt="Selected label preview" hidden>
+        </label>
+      </div>
 
       <label class="field">
         <span class="field-label">2. Brand name (from the application)</span>
@@ -62,5 +66,6 @@
       Proof of concept. Processing is local; nothing you upload is stored.
     </footer>
   </main>
+  <script src="/static/upload.js" defer></script>
 </body>
 </html>
