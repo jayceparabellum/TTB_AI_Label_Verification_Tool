@@ -101,20 +101,56 @@ def _prepare(image_bytes: bytes) -> Image.Image:
 # on CPU-constrained hosts (e.g. small cloud instances).
 _TESS_CONFIG = "--psm 6"
 
+# Mean word confidence (Tesseract reports 0-100) below this marks the read as
+# marginal -> the verdict becomes "needs human review" rather than a hard
+# PASS/FLAG. A single coarse threshold by design (see plan scope).
+OCR_CONFIDENCE_THRESHOLD = 55.0
 
-def extract_text(image_bytes: bytes) -> str:
-    """Return the raw text Tesseract reads from the label image.
 
-    Raises OcrReadError if the bytes can't be decoded or OCR'd, so the caller
-    can return a friendly "couldn't read" result rather than a 500.
+def _reconstruct(data: dict) -> tuple[str, float]:
+    """Turn Tesseract's word-level data into (line-preserving text, mean confidence).
+
+    Words are grouped by (block, paragraph, line) so the reconstructed text keeps
+    the line breaks the brand matcher relies on; confidence is the mean over real
+    words (Tesseract uses -1 for non-text boxes, which we ignore).
+    """
+    lines: dict[tuple, list[str]] = {}
+    confs: list[float] = []
+    for i, word in enumerate(data["text"]):
+        if not word.strip():
+            continue
+        key = (data["block_num"][i], data["par_num"][i], data["line_num"][i])
+        lines.setdefault(key, []).append(word)
+        conf = float(data["conf"][i])
+        if conf >= 0:
+            confs.append(conf)
+    text = "\n".join(" ".join(words) for _, words in sorted(lines.items()))
+    mean_conf = sum(confs) / len(confs) if confs else 0.0
+    return text, mean_conf
+
+
+def extract_text_data(image_bytes: bytes) -> tuple[str, float]:
+    """Return (text, mean_confidence) from one Tesseract pass.
+
+    One `image_to_data` call yields both the text and per-word confidence, so we
+    get the confidence signal without a second OCR pass (protects the <5s budget).
+    Raises OcrReadError if the bytes can't be decoded or OCR'd.
     """
     _ensure_configured()
     try:
         img = _prepare(image_bytes)
-        return pytesseract.image_to_string(img, config=_TESS_CONFIG)
+        data = pytesseract.image_to_data(
+            img, config=_TESS_CONFIG, output_type=pytesseract.Output.DICT
+        )
     except (UnidentifiedImageError, OSError, ValueError,
             Image.DecompressionBombError, pytesseract.pytesseract.TesseractError) as exc:
         raise OcrReadError(str(exc)) from exc
+    return _reconstruct(data)
+
+
+def extract_text(image_bytes: bytes) -> str:
+    """Return just the OCR text (see extract_text_data for text + confidence)."""
+    return extract_text_data(image_bytes)[0]
 
 
 def is_readable(text: str) -> bool:

@@ -1,6 +1,6 @@
 ---
 title: "feat: UI features — drag-drop preview, printable result, inline re-check, confidence cue"
-status: active
+status: completed
 date: 2026-06-17
 depth: standard
 ---

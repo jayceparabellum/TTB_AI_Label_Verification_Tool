@@ -116,6 +116,7 @@ def reverify(
     ocr_text: str = Form(""),
     image_src: str = Form(""),
     expected_warning: str = Form(OFFICIAL_GOVERNMENT_WARNING),
+    confidence: float = Form(100.0),
 ):
     """Re-check edited brand/ABV against the carried OCR text — no re-OCR (U4)."""
     warning = expected_warning or OFFICIAL_GOVERNMENT_WARNING
@@ -125,7 +126,7 @@ def reverify(
             request, result, brand, alcohol_content, image_src=image_src or None
         )
     result = reverify_text(ocr_text, brand=brand, alcohol_content=alcohol_content,
-                           expected_warning=warning)
+                           expected_warning=warning, confidence=confidence)
     return _render_result(
         request, result, brand, alcohol_content,
         image_src=image_src or None, ocr_text=ocr_text, expected_warning=warning,

@@ -85,6 +85,8 @@ input:focus, textarea:focus { outline: 3px solid var(--accent); border-color: va
 .banner-pass { background: var(--pass-bg); color: var(--pass); }
 .banner-flag { background: var(--flag-bg); color: var(--flag); }
 .banner-unreadable { background: #fef9c3; color: #854d0e; }
+/* "needs review" — distinct amber, clearly neither pass (green) nor flag (red) */
+.banner-review { background: #ffedd5; color: #9a3412; border: 2px solid #fb923c; }
 
 .results { display: flex; flex-direction: column; gap: 16px; }
 .result-card { border: 2px solid var(--line); border-radius: 12px; padding: 18px; background: #fff; }

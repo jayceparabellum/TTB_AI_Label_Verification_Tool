@@ -23,7 +23,13 @@
         <p>{{ result.message }}</p>
       </div>
     {% else %}
-      {% if result.overall_pass %}
+      {% if result.needs_review %}
+        <div class="banner banner-review">
+          <h1>NEEDS REVIEW &mdash; low confidence read</h1>
+          <p>The label text was hard to read (confidence {{ result.confidence|round|int }}%).
+            Please double-check by eye &mdash; the checks below are a best effort.</p>
+        </div>
+      {% elif result.overall_pass %}
         <div class="banner banner-pass">
           <h1>PASS &mdash; everything matches</h1>
           <p>All {{ result.fields|length }} checks passed in {{ result.elapsed_ms }} ms.</p>
@@ -74,6 +80,7 @@
         <input type="hidden" name="ocr_text" value="{{ ocr_text }}">
         <input type="hidden" name="image_src" value="{{ image_src or '' }}">
         <input type="hidden" name="expected_warning" value="{{ expected_warning }}">
+        <input type="hidden" name="confidence" value="{{ result.confidence }}">
         <button type="submit" class="btn-secondary">Re-check</button>
       </form>
 

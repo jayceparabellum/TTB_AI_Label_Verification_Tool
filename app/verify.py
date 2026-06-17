@@ -43,12 +43,14 @@ def reverify_text(
     brand: str,
     alcohol_content: str,
     expected_warning: str = OFFICIAL_GOVERNMENT_WARNING,
+    confidence: float = 100.0,
 ) -> VerificationResult:
     """Re-check edited claimed data against the SAME OCR text (no re-OCR).
 
     The label image and its text are unchanged on a re-check — only the claimed
     brand/ABV change — so running the matchers on the carried text keeps verdicts
-    consistent with the original read and is instant.
+    consistent with the original read and is instant. The OCR read quality is
+    unchanged too, so the carried confidence / needs-review state is preserved.
     """
     start = time.perf_counter()
     fields = verify_fields(text, brand, alcohol_content, expected_warning)
@@ -57,6 +59,8 @@ def reverify_text(
         fields=fields,
         elapsed_ms=int((time.perf_counter() - start) * 1000),
         ocr_text=text,
+        confidence=confidence,
+        needs_review=confidence < ocr.OCR_CONFIDENCE_THRESHOLD,
     )
 
 
@@ -70,7 +74,7 @@ def verify_label(
     start = time.perf_counter()
 
     try:
-        text = ocr.extract_text(image_bytes)
+        text, confidence = ocr.extract_text_data(image_bytes)
     except ocr.OcrReadError:
         # Undecodable/corrupt/oversized upload (e.g. a HEIC photo or a PDF).
         return VerificationResult(
@@ -95,4 +99,6 @@ def verify_label(
         fields=fields,
         elapsed_ms=int((time.perf_counter() - start) * 1000),
         ocr_text=text,
+        confidence=confidence,
+        needs_review=confidence < ocr.OCR_CONFIDENCE_THRESHOLD,
     )

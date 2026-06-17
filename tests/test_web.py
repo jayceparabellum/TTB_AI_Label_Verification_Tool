@@ -93,3 +93,32 @@ def test_reverify_empty_text_returns_friendly_message():
         "brand": "X", "alcohol_content": "5", "ocr_text": "",
     })
     assert "Couldn't read this image" in r.text
+
+
+# --- U5/U6: confidence "needs review" cue --------------------------------------
+def test_reverify_low_confidence_shows_needs_review_banner():
+    text = _ocr_text("clean_pass")
+    r = client.post("/reverify", data={
+        "brand": "Stone's Throw", "alcohol_content": "5.0",
+        "ocr_text": text, "confidence": "20",
+    })
+    assert "NEEDS REVIEW" in r.text
+    assert "banner-review" in r.text
+
+
+def test_upload_low_confidence_shows_needs_review_banner():
+    from PIL import Image, ImageFilter
+    import io
+
+    blurred = Image.open(SAMPLES / "clean_pass.png").convert("RGB").filter(
+        ImageFilter.GaussianBlur(3.0)
+    )
+    buf = io.BytesIO()
+    blurred.save(buf, format="PNG")
+    buf.seek(0)
+    r = client.post(
+        "/verify",
+        data={"brand": "Stone's Throw", "alcohol_content": "5.0"},
+        files={"label_image": ("blur.png", buf, "image/png")},
+    )
+    assert "NEEDS REVIEW" in r.text
