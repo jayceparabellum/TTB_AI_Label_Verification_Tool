@@ -86,7 +86,7 @@ def test_low_confidence_image_needs_review():
     from PIL import Image, ImageFilter
     import io
 
-    blurred = Image.open(SAMPLES / "clean_pass.png").convert("RGB").filter(
+    blurred = Image.open(SAMPLES_DIR / "clean_pass.png").convert("RGB").filter(
         ImageFilter.GaussianBlur(3.0)
     )
     buf = io.BytesIO()
