@@ -9,6 +9,9 @@ second.
 This is a standalone POC. It is **not** integrated with COLA or any government
 system, stores nothing, and handles no real PII.
 
+**🔗 Live demo:** https://ttb-label-verification-9q01.onrender.com — upload a
+label, or try one of the three bundled samples with one click.
+
 ---
 
 ## What it checks
@@ -53,21 +56,24 @@ and point the app at it — `app/ocr.py` auto-detects a Tesseract under
 ## Tests and evaluation
 
 ```bash
-pytest                    # 22 unit + end-to-end tests
+pytest                    # 27 unit + end-to-end tests
 python eval/run_eval.py   # accuracy + latency report -> eval/REPORT.md
 ```
 
 The eval harness reports **two honest numbers** instead of one round figure:
 
-- **Logic-on-clean accuracy** — the decision logic on correctly-read text. This is
-  the deterministic core and measures **100%** on the labeled case set.
-- **End-to-end accuracy** — full OCR + matching, *including degraded photos*
-  (rotation, blur, JPEG noise, low contrast). This is lower (~71% on the current
-  set) because strict warning matching is intentionally unforgiving: a heavily
-  blurred photo can drop a character and miss the warning. Brand and ABV still
-  pass on those same degraded images.
+- **Logic-on-clean accuracy — 100%** (9/9 field decisions). The decision logic on
+  correctly-read text; this is the deterministic core and the basis for the
+  `<1%`-error target.
+- **End-to-end accuracy — 57%** (4/7 cases), full OCR + matching *including
+  degraded photos* (rotation, blur, JPEG noise, low contrast). All 3 clean cases
+  pass; on the 4 degraded cases, **brand and ABV still pass every time** — only
+  the deliberately-strict warning check misses when OCR drops a character. That is
+  the documented trade-off, measured rather than hidden, not a logic error.
 
-Latency across all cases stays well under the 5-second budget (~120–220 ms locally).
+Latency stays far under the 5-second budget: **~80–270 ms server compute locally**,
+and **~550–750 ms on the live Render Starter instance** (~1 s round-trip including
+network).
 
 ---
 
@@ -106,8 +112,10 @@ docker build -t ttb-label-verification .
 docker run -p 8000:8000 ttb-label-verification
 ```
 
-`render.yaml` declares a Docker web service for one-click deploy on Render
-(`render deploy` or connect the repo). Health check at `/health`.
+`render.yaml` declares a Docker web service for one-click deploy on Render;
+`scripts/deploy_render.sh` is a one-command deploy once `render login` is done.
+The live instance runs on Render's **Starter** plan (free tier's 0.1 CPU is too
+throttled for OCR — see the latency note below). Health check at `/health`.
 
 ---
 
