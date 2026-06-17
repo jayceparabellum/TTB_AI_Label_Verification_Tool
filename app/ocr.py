@@ -8,6 +8,7 @@ in-process and easily meets the <5s latency budget on a legible label.
 from __future__ import annotations
 
 import io
+import logging
 import os
 import re
 import shutil
@@ -15,6 +16,8 @@ from pathlib import Path
 
 import pytesseract
 from PIL import Image, ImageOps, UnidentifiedImageError
+
+logger = logging.getLogger(__name__)
 
 
 class OcrReadError(Exception):
@@ -26,6 +29,10 @@ class OcrReadError(Exception):
     """
 
 
+class TesseractNotFoundError(RuntimeError):
+    """Raised when Tesseract cannot be found on PATH or in the local prefix."""
+
+
 def _configure_local_tesseract() -> None:
     """Use a no-root, locally-extracted Tesseract when the system has none.
 
@@ -33,13 +40,19 @@ def _configure_local_tesseract() -> None:
     no-op. In a locked-down dev box without root, we extract the .deb into
     ~/.local/tess; point pytesseract at that binary and set the runtime env
     (LD_LIBRARY_PATH / TESSDATA_PREFIX) that the subprocess will inherit.
+
+    Raises TesseractNotFoundError if no Tesseract binary can be located.
     """
     if shutil.which("tesseract"):
         return
     prefix = Path.home() / ".local" / "tess"
     binary = prefix / "usr" / "bin" / "tesseract"
     if not binary.exists():
-        return
+        raise TesseractNotFoundError(
+            "Tesseract OCR is not installed and no local extraction found at "
+            f"{prefix}. Install with: sudo apt-get install -y tesseract-ocr"
+        )
+    logger.info("Using locally-extracted Tesseract at %s", binary)
     pytesseract.pytesseract.tesseract_cmd = str(binary)
     libdirs = [prefix / "usr" / "lib" / "x86_64-linux-gnu", prefix / "usr" / "lib"]
     existing = os.environ.get("LD_LIBRARY_PATH", "")
@@ -49,6 +62,12 @@ def _configure_local_tesseract() -> None:
     tessdata = next(prefix.rglob("eng.traineddata"), None)
     if tessdata is not None:
         os.environ["TESSDATA_PREFIX"] = str(tessdata.parent)
+    else:
+        logger.warning(
+            "Tesseract binary found at %s but eng.traineddata not located "
+            "under %s — OCR may fail.",
+            binary, prefix,
+        )
 
 
 _configured = False
@@ -107,8 +126,14 @@ def extract_text(image_bytes: bytes) -> str:
 
     Raises OcrReadError if the bytes can't be decoded or OCR'd, so the caller
     can return a friendly "couldn't read" result rather than a 500.
+
+    Raises TesseractNotFoundError (a RuntimeError subclass) if Tesseract is
+    not installed — this is a deployment issue, not a user-input issue, and
+    should surface as a 500.
     """
     _ensure_configured()
+    if not image_bytes:
+        raise OcrReadError("empty image payload")
     try:
         img = _prepare(image_bytes)
         return pytesseract.image_to_string(img, config=_TESS_CONFIG)

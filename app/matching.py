@@ -12,12 +12,15 @@ Two deliberately different strategies (this is the heart of the tool):
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 
 from rapidfuzz import fuzz
 
 from .reference import OFFICIAL_GOVERNMENT_WARNING, WARNING_HEADER
+
+logger = logging.getLogger(__name__)
 
 # --- Tunables (see PRD-v1.md) -------------------------------------------------
 # Brand similarity is measured AFTER normalization (case/punct/whitespace
@@ -154,16 +157,28 @@ def match_alcohol_content(expected: str, ocr_text: str) -> FieldResult:
     claimed = _parse_claimed_abv(expected)
     candidates = _abv_candidates(ocr_text)
 
+    if claimed is None:
+        logger.warning(
+            "Could not parse a numeric ABV from claimed value: %r", expected
+        )
+        return FieldResult(
+            field="alcohol_content",
+            label="Alcohol content",
+            passed=False,
+            expected=expected,
+            found="(unable to compare)",
+            detail=f"could not parse a numeric ABV from the claimed value '{expected}'",
+        )
+
     matched = None
-    if claimed is not None:
-        for value, label in candidates:
-            if abs(value - claimed) <= ABV_TOLERANCE:
-                matched = (value, label)
-                break
+    for value, label in candidates:
+        if abs(value - claimed) <= ABV_TOLERANCE:
+            matched = (value, label)
+            break
 
     passed = matched is not None
     if passed:
-        found_display = matched[1]                 # the value that actually matched
+        found_display = matched[1]
         detail = "matches the claimed alcohol content"
     elif candidates:
         found_display = ", ".join(label for _, label in candidates)
@@ -176,7 +191,7 @@ def match_alcohol_content(expected: str, ocr_text: str) -> FieldResult:
         field="alcohol_content",
         label="Alcohol content",
         passed=passed,
-        expected=f"{claimed:g}% ABV" if claimed is not None else expected,
+        expected=f"{claimed:g}% ABV",
         found=found_display,
         detail=detail,
     )

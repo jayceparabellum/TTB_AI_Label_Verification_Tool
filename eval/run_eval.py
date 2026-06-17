@@ -10,6 +10,7 @@ Writes a markdown summary to eval/REPORT.md.
 
 from __future__ import annotations
 
+import logging
 import sys
 from pathlib import Path
 
@@ -20,6 +21,8 @@ from PIL import Image, ImageEnhance, ImageFilter  # noqa: E402
 
 from app.verify import verify_label  # noqa: E402
 from eval.cases import CLEAN_CASES, DEGRADED_SPECS, EvalCase  # noqa: E402
+
+logger = logging.getLogger(__name__)
 
 IMAGES = Path(__file__).resolve().parent / "images"
 
@@ -70,7 +73,20 @@ def _real_cases() -> list[EvalCase]:
             meta = img.with_suffix(".txt")
             brand, abv = "", "5.0"
             if meta.exists():
-                brand, abv = (meta.read_text().strip().split("|") + ["5.0"])[:2]
+                raw = meta.read_text().strip()
+                parts = raw.split("|")
+                if len(parts) < 2:
+                    logger.warning(
+                        "Malformed metadata in %s: expected 'brand|abv', got %r. "
+                        "Using defaults (brand='', abv='5.0').",
+                        meta, raw,
+                    )
+                brand, abv = (parts + ["5.0"])[:2]
+            else:
+                logger.info(
+                    "No metadata sidecar for %s — using defaults (brand='', abv='5.0').",
+                    img.name,
+                )
             out.append(EvalCase(img.stem, str(img.relative_to(ROOT)), brand, abv,
                                 "real", True, True, True))
     return out

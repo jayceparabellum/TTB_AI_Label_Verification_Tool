@@ -38,7 +38,13 @@ W, H = 1000, 700
 
 def _font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
     name = "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"
-    return ImageFont.truetype(str(FONT_DIR / name), size)
+    font_path = FONT_DIR / name
+    if not font_path.exists():
+        raise FileNotFoundError(
+            f"Required font not found: {font_path}\n"
+            f"Install with: sudo apt-get install -y fonts-dejavu-core"
+        )
+    return ImageFont.truetype(str(font_path), size)
 
 
 def draw_label(brand: str, abv_text: str, warning: str) -> Image.Image:
