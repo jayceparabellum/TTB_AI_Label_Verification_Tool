@@ -57,6 +57,16 @@ def test_unreadable_image_returns_friendly_message():
     assert not r.fields
 
 
+def test_non_image_upload_returns_friendly_message():
+    # A PDF / HEIC / corrupt file can't be decoded — the user should get the
+    # friendly "couldn't read" result, not a 500.
+    for blob in (b"%PDF-1.4 not an image", b"\x00\x01\x02 garbage bytes", b""):
+        r = verify_label(blob, brand="X", alcohol_content="5")
+        assert r.readable is False
+        assert "couldn't read" in r.message.lower()
+        assert not r.fields
+
+
 def test_latency_under_5s_on_each_sample():
     for name in ("clean_pass.png", "abv_mismatch.png", "bad_warning.png"):
         r = _verify(name)

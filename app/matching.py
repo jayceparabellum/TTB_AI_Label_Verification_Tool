@@ -66,16 +66,21 @@ def match_brand(expected: str, ocr_text: str) -> FieldResult:
 
     candidates = [ln.strip() for ln in ocr_text.splitlines() if ln.strip()]
     # Also consider the whole text as one candidate (handles single-line OCR).
-    candidates.append(ocr_text)
+    candidates.append(ocr_text.strip())
+
+    # partial_ratio finds a brand embedded in a longer line, but for a short
+    # brand it matches incidental substrings of the whole page (e.g. "Bud"
+    # against any "...bud..."), so only use it once the brand is long enough
+    # to be discriminating. Short brands must match a line closely (ratio).
+    use_partial = len(exp_norm.replace(" ", "")) >= 5
 
     for line in candidates:
         line_norm = normalize_loose(line)
         if not line_norm or not exp_norm:
             continue
-        # ratio catches whole-string equality; partial_ratio finds the brand
-        # embedded in a longer line (e.g. "STONE'S THROW BREWING CO").
-        score = max(fuzz.ratio(exp_norm, line_norm),
-                    fuzz.partial_ratio(exp_norm, line_norm))
+        score = fuzz.ratio(exp_norm, line_norm)
+        if use_partial:
+            score = max(score, fuzz.partial_ratio(exp_norm, line_norm))
         if score > best_score:
             best_score, best_line = score, line.strip()
 
@@ -94,6 +99,10 @@ def match_brand(expected: str, ocr_text: str) -> FieldResult:
 _PERCENT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*%")
 _ALC_NUM_RE = re.compile(r"(?:alc(?:ohol)?\.?(?:\s*/?\s*vol)?\.?\s*)(\d+(?:\.\d+)?)", re.I)
 _PROOF_RE = re.compile(r"(\d+(?:\.\d+)?)\s*proof", re.I)
+# An alcohol keyword within this many characters of a percentage marks it as an
+# alcohol statement (vs. e.g. "5% real juice", "100% recycled").
+_ALC_KEYWORDS = ("alc", "abv", "vol")
+_ALC_WINDOW = 12
 
 
 def _parse_claimed_abv(expected: str):
@@ -102,32 +111,74 @@ def _parse_claimed_abv(expected: str):
     return float(m.group()) if m else None
 
 
+def _abv_candidates(ocr_text: str) -> list[tuple[float, str]]:
+    """Extract (abv_value, display_label) pairs that look like alcohol content.
+
+    Prefers numbers in *alcohol context* — a percentage next to ALC/ABV/VOL, an
+    explicit "ALC <n>", or a proof value — so unrelated percentages on the label
+    ("5% real juice") don't get treated as the alcohol content. Falls back to
+    bare percentages only when no alcohol-context number is present at all.
+    """
+    low = ocr_text.lower()
+    out: list[tuple[float, str]] = []
+
+    for m in _PERCENT_RE.finditer(ocr_text):
+        window = low[max(0, m.start() - _ALC_WINDOW): m.end() + _ALC_WINDOW]
+        if any(k in window for k in _ALC_KEYWORDS):
+            v = float(m.group(1))
+            out.append((v, f"{v:g}%"))
+    for m in _ALC_NUM_RE.finditer(ocr_text):
+        v = float(m.group(1))
+        out.append((v, f"{v:g}% (ALC)"))
+    for m in _PROOF_RE.finditer(ocr_text):
+        v = float(m.group(1)) / 2.0
+        out.append((v, f"{m.group(1)} proof (= {v:g}% ABV)"))
+
+    if not out:  # best-effort fallback: any percentage on the label
+        for m in _PERCENT_RE.finditer(ocr_text):
+            v = float(m.group(1))
+            out.append((v, f"{v:g}%"))
+
+    # Dedupe by value, keeping the first (most specific) label.
+    seen: set[float] = set()
+    deduped: list[tuple[float, str]] = []
+    for v, label in out:
+        if v not in seen:
+            seen.add(v)
+            deduped.append((v, label))
+    return deduped
+
+
 def match_alcohol_content(expected: str, ocr_text: str) -> FieldResult:
     """Numeric ABV match. Understands '%', 'ALC/VOL', and proof (= 2 x ABV)."""
     claimed = _parse_claimed_abv(expected)
+    candidates = _abv_candidates(ocr_text)
 
-    pct_vals = [float(x) for x in _PERCENT_RE.findall(ocr_text)]
-    alc_vals = [float(x) for x in _ALC_NUM_RE.findall(ocr_text)]
-    proof_vals = [float(x) / 2.0 for x in _PROOF_RE.findall(ocr_text)]
-    candidates = pct_vals + alc_vals + proof_vals
+    matched = None
+    if claimed is not None:
+        for value, label in candidates:
+            if abs(value - claimed) <= ABV_TOLERANCE:
+                matched = (value, label)
+                break
 
-    found_display = "(no alcohol content found on label)"
-    if pct_vals or alc_vals:
-        found_display = ", ".join(f"{v:g}%" for v in sorted(set(pct_vals + alc_vals)))
-    elif proof_vals:
-        found_display = ", ".join(f"{v * 2:g} proof (= {v:g}% ABV)" for v in proof_vals)
+    passed = matched is not None
+    if passed:
+        found_display = matched[1]                 # the value that actually matched
+        detail = "matches the claimed alcohol content"
+    elif candidates:
+        found_display = ", ".join(label for _, label in candidates)
+        detail = "label alcohol content differs from the application"
+    else:
+        found_display = "(no alcohol content found on label)"
+        detail = "no alcohol statement detected on the label"
 
-    passed = (
-        claimed is not None
-        and any(abs(c - claimed) <= ABV_TOLERANCE for c in candidates)
-    )
     return FieldResult(
         field="alcohol_content",
         label="Alcohol content",
         passed=passed,
         expected=f"{claimed:g}% ABV" if claimed is not None else expected,
         found=found_display,
-        detail="proof converted to ABV where applicable",
+        detail=detail,
     )
 
 

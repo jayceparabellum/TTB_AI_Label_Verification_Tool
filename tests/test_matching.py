@@ -30,6 +30,14 @@ def test_brand(expected, ocr_text, should_pass):
     assert match_brand(expected, ocr_text).passed is should_pass
 
 
+def test_short_brand_not_falsely_matched_by_substring():
+    # A short brand must not pass just because its letters appear as a
+    # substring somewhere on a busy label (partial_ratio false positive).
+    assert match_brand("Bud", "STONE'S THROW BREWING CO\nPALE ALE\n12 FL OZ").passed is False
+    # but a short brand that genuinely appears still passes
+    assert match_brand("Bud", "BUD").passed is True
+
+
 # --- Alcohol content (numeric, proof-aware) -----------------------------------
 @pytest.mark.parametrize(
     "claimed, ocr_text, should_pass",
@@ -45,6 +53,23 @@ def test_brand(expected, ocr_text, should_pass):
 )
 def test_alcohol_content(claimed, ocr_text, should_pass):
     assert match_alcohol_content(claimed, ocr_text).passed is should_pass
+
+
+def test_alcohol_ignores_unrelated_percentage():
+    # The real alcohol content (8%) mismatches the claim; a stray "5%" that is
+    # NOT in alcohol context must not create a false PASS.
+    label = "ALC 8% BY VOL.\nContains 5% real fruit juice. 12 FL OZ"
+    res = match_alcohol_content("5.0", label)
+    assert res.passed is False
+    assert "8%" in res.found
+
+
+def test_alcohol_found_shows_the_matching_value():
+    # When proof drives the match, the displayed 'found' must reflect it, not a
+    # different percentage also present on the label.
+    res = match_alcohol_content("40", "ALC 10% SERVING ... 80 proof")
+    assert res.passed is True
+    assert "proof" in res.found.lower() or "40" in res.found
 
 
 # --- Government warning (strict) ----------------------------------------------

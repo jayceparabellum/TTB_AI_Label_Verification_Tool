@@ -23,17 +23,27 @@ def verify_label(
     """Verify a single label image against the claimed application data."""
     start = time.perf_counter()
 
-    text = ocr.extract_text(image_bytes)
+    _UNREADABLE = (
+        "Couldn't read this image. Please upload a clearer, well-lit "
+        "photo of the label with the text in focus."
+    )
 
-    if not ocr.is_readable(text):
-        elapsed_ms = int((time.perf_counter() - start) * 1000)
+    try:
+        text = ocr.extract_text(image_bytes)
+    except ocr.OcrReadError:
+        # Undecodable/corrupt/oversized upload (e.g. a HEIC photo or a PDF).
         return VerificationResult(
             readable=False,
-            elapsed_ms=elapsed_ms,
-            message=(
-                "Couldn't read this image. Please upload a clearer, well-lit "
-                "photo of the label with the text in focus."
-            ),
+            elapsed_ms=int((time.perf_counter() - start) * 1000),
+            message=_UNREADABLE,
+            ocr_text="",
+        )
+
+    if not ocr.is_readable(text):
+        return VerificationResult(
+            readable=False,
+            elapsed_ms=int((time.perf_counter() - start) * 1000),
+            message=_UNREADABLE,
             ocr_text=text,
         )
 

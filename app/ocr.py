@@ -14,7 +14,16 @@ import shutil
 from pathlib import Path
 
 import pytesseract
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, UnidentifiedImageError
+
+
+class OcrReadError(Exception):
+    """Raised when an upload cannot be decoded or OCR'd.
+
+    Lets the caller surface a friendly "couldn't read this image" result
+    instead of a 500 — e.g. for a HEIC iPhone photo, a PDF, a corrupt or
+    truncated file, or an image too large to process.
+    """
 
 
 def _configure_local_tesseract() -> None:
@@ -60,7 +69,8 @@ def _prepare(image_bytes: bytes) -> Image.Image:
     longest = max(img.size)
     if longest > MAX_EDGE_PX:
         scale = MAX_EDGE_PX / longest
-        img = img.resize((int(img.width * scale), int(img.height * scale)))
+        # clamp to >=1 so an extreme aspect ratio can't produce a 0-px edge
+        img = img.resize((max(1, int(img.width * scale)), max(1, int(img.height * scale))))
     return img
 
 
@@ -74,9 +84,17 @@ os.environ.setdefault("OMP_THREAD_LIMIT", "1")
 
 
 def extract_text(image_bytes: bytes) -> str:
-    """Return the raw text Tesseract reads from the label image."""
-    img = _prepare(image_bytes)
-    return pytesseract.image_to_string(img, config=_TESS_CONFIG)
+    """Return the raw text Tesseract reads from the label image.
+
+    Raises OcrReadError if the bytes can't be decoded or OCR'd, so the caller
+    can return a friendly "couldn't read" result rather than a 500.
+    """
+    try:
+        img = _prepare(image_bytes)
+        return pytesseract.image_to_string(img, config=_TESS_CONFIG)
+    except (UnidentifiedImageError, OSError, ValueError,
+            Image.DecompressionBombError, pytesseract.pytesseract.TesseractError) as exc:
+        raise OcrReadError(str(exc)) from exc
 
 
 def is_readable(text: str) -> bool:
