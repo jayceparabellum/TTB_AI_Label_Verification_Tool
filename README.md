@@ -127,3 +127,9 @@ docker run -p 8000:8000 ttb-label-verification
 - **Single label at a time.** Batch upload, image-quality correction, a
   "needs human review" confidence state, COLA integration, and auth are all
   deliberately out of scope for this POC (candidate next steps).
+- **OCR is CPU-bound, so the host's CPU sets the latency.** On a normal CPU the
+  full verify is ~200 ms (well under the 5 s budget). Tesseract is tuned for
+  constrained hosts (`--psm 6`, single OpenMP thread). Note that a heavily
+  throttled instance (e.g. Render's free 0.1-CPU tier) can push a single OCR
+  call to ~20 s — use at least ~0.5–1 CPU (Render Starter/Standard or equivalent)
+  to keep verifications under 5 s.
