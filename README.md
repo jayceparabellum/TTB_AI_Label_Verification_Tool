@@ -12,6 +12,11 @@ system, stores nothing, and handles no real PII.
 **🔗 Live demo:** https://ttb-label-verification-9q01.onrender.com — upload a
 label, or try one of the three bundled samples with one click.
 
+![Demo: upload a label, get a per-field PASS/FLAG verdict in well under a second](docs/media/demo.gif)
+
+<sub>Upload screen → a clean label PASSes all three checks → a non-compliant
+label is FLAGGED. ([upload](docs/media/home.png) · [PASS](docs/media/result-pass.png) · [FLAG](docs/media/result-flag.png) stills)</sub>
+
 ---
 
 ## What it checks
