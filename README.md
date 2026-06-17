@@ -146,3 +146,9 @@ throttled for OCR — see the latency note below). Health check at `/health`.
   throttled instance (e.g. Render's free 0.1-CPU tier) can push a single OCR
   call to ~20 s — use at least ~0.5–1 CPU (Render Starter/Standard or equivalent)
   to keep verifications under 5 s.
+
+---
+
+## License
+
+[MIT](LICENSE) © 2026 Jayce Parabellum
