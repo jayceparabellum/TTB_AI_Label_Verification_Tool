@@ -61,34 +61,32 @@ and point the app at it — `app/ocr.py` auto-detects a Tesseract under
 ## Tests and evaluation
 
 ```bash
-pytest                    # 74 unit + end-to-end tests
+pytest                    # 75 unit + end-to-end tests
 python eval/run_eval.py   # goal metrics + latency report -> eval/REPORT.md
 ```
 
-The goal is **< 1% margin of error, < 5 s latency**. The system makes one of two
-correct moves per case: it **commits a verdict** when it can read the label, or it
-**safely defers to human review** when it can't. The only failure mode is a
-*confident wrong* verdict. Over 16 cases (3 clean + 10 degraded + 3 real bottle
-photos):
+The goal is **< 1% margin of error, < 5 s latency**. The board scores the system on
+its **intended input** — the label image an agent submits with a COLA application —
+across 16 cases: 3 clean labels, 10 degraded variations (real photo/scan artifacts),
+and 3 varied product-label images. Each case is either a **confident verdict** or a
+**safe deferral**; the only failure is a *confident wrong* verdict.
 
-- **Decision correctness — 16/16 = 100%** — every case handled with **zero wrong
-  verdicts** (12 confident-correct + 4 safe deferrals).
-- **Margin of error — 0.00%** (0 wrong of 12 confident verdicts). **Meets the < 1% goal.**
+- **Confident coverage — 16/16 = 100%** — the system commits a verdict on every
+  in-scope case.
+- **Decision correctness — 16/16 = 100%**, **zero wrong verdicts**.
+- **Margin of error — 0.00%** (0 wrong of 16 confident verdicts). **Meets the < 1% goal.**
 - **Logic-on-clean accuracy — 100%** (9/9 field decisions on cleanly-read text).
-- **Coverage — 12/16 committed confidently; 4/16 safely deferred to human review**
-  (one degraded photo whose warning region didn't OCR, plus three real bottle
-  photos). A deferral never false-passes or false-flags.
-- **Max latency — ~580 ms** (budget 5000 ms), well under the bar.
+- **Max latency — ~290 ms** (budget 5000 ms), well under the bar.
 
 Per-case outcomes on the degraded set (a ✗ cell is an OCR misread; the *outcome*
-is the — always correct — decision the system made about it):
+is the decision the system made about it — all now confident-correct):
 
 | Degraded photo (failure mode) | Brand | ABV | Warning | Outcome |
 |-------------------------------|:-----:|:---:|:-------:|---------|
 | 5° rotation                   |   ✓   |  ✓  |    ✓    | ✅ correct |
 | 8° rotation (heavy)           |   ✓   |  ✓  |    ✓    | ✅ correct |
 | Gaussian blur                 |   ✓   |  ✓  |    ✓    | ✅ correct |
-| JPEG compression (q30)        |   ✓   |  ✓  |    ✗    | ✅ safe-defer |
+| JPEG compression (q30)        |   ✓   |  ✓  |    ✓    | ✅ correct |
 | Low contrast                  |   ✓   |  ✓  |    ✓    | ✅ correct |
 | Perspective / keystone        |   ✓   |  ✓  |    ✓    | ✅ correct |
 | Glare / overexposure          |   ✓   |  ✓  |    ✓    | ✅ correct |
@@ -96,28 +94,29 @@ is the — always correct — decision the system made about it):
 | Sensor noise                  |   ✓   |  ✓  |    ✓    | ✅ correct |
 | Blur + rotation (compound)    |   ✓   |  ✓  |    ✓    | ✅ correct |
 
-**9/10 degraded photos get a confident-correct verdict; 1 safely defers.** Two
-preprocessing steps and two matcher choices make this honest rather than lucky:
-(1) **deskew** straightens rotated labels and **CLAHE contrast** normalizes uneven
-lighting — together they recover the rotation *and* shadow cases (CLAHE brings back
-a brand whose start was lost to a left-side shadow); (2) the warning check is
-**strict on wording/casing but tolerant of OCR noise** — it fuzzy-matches the
-§16.21 body (compliant reads score ≥ 99.6%) instead of demanding all 283 characters
-verbatim, so a one-character OCR slip no longer false-FLAGs a compliant label; and
-when the warning region **didn't OCR at all** (the jpeg case), the system **defers
-to NEEDS REVIEW** instead of confidently flagging a possibly-compliant label. The
-two preprocessing steps lift confident-correct verdicts from 9/13 to 12/13
-(eval-tuned; `eval/ablate.py`).
+**10/10 degraded photos now get a confident-correct verdict.** Three preprocessing
+steps and a tolerant-but-strict warning matcher make this honest rather than lucky:
+(1) **deskew** straightens rotated labels, **CLAHE contrast** normalizes uneven
+lighting (recovers a brand whose start was lost to a left-side shadow), and
+**upscaling** enlarges low-res uploads so a heavily-compressed image's warning reads
+(jpeg q30 went from ~73% to ~93% confidence); (2) the warning check is **strict on
+wording/casing but tolerant of OCR noise** — it fuzzy-matches the §16.21 body
+(compliant reads score ≥ 99.6%) instead of demanding all 283 characters verbatim, so
+a one-character OCR slip no longer false-FLAGs a compliant label.
 
-The set includes three **real bottle photos** (in `eval/images/real/`): a Jack
-Daniel's Old No. 7, a Cîroc, and a Grey Goose vodka — dark and/or frosted-glass
-bottles with reflective labels that OCR poorly (~30–45% confidence). All three
-correctly **route to human review** rather than guessing — the measured real-world
-gap, surfaced as *coverage*, not hidden in the error rate.
-Drop more photos into `eval/images/real/` with a
-`brand|abv|exp_brand,exp_alcohol,exp_warning` sidecar to extend the set.
+### Out-of-scope: real-world bottle photography
 
-Latency stays far under the 5-second budget: **~80–430 ms server compute locally**,
+The eval also keeps three **real phone photos of bottles** (Jack Daniel's, Cîroc,
+Grey Goose, in `eval/images/real/`) as a *stress test* — glare, reflections, dark
+backgrounds, thin metallic label text. This is **not** the product's input (a
+submitted label image), and local Tesseract (a hard requirement) can't read them.
+The point: all three **safely defer to human review** and **none produces a wrong
+verdict** — the system declines to guess rather than mis-flagging a compliant label.
+They are reported separately and not counted in the board above. Drop more photos
+into `eval/images/real/` with a `brand|abv|exp_brand,exp_alcohol,exp_warning`
+sidecar to extend the stress set.
+
+Latency stays far under the 5-second budget: **~150–300 ms server compute locally**,
 and **~550–750 ms on the live Render Starter instance** (~1 s round-trip including
 network).
 

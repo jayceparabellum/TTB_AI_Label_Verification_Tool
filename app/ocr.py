@@ -81,6 +81,11 @@ MIN_READABLE_CHARS = 12
 # Cap the long edge so a huge phone photo doesn't blow the latency budget.
 MAX_EDGE_PX = 2000
 
+# Upscale a small upload before OCR: Tesseract needs enough pixels per glyph, so a
+# low-res image (e.g. a heavily-compressed or thumbnail-sized photo) reads far
+# better enlarged. Cheap — the result is still well under MAX_EDGE_PX.
+MIN_EDGE_PX = 1000
+
 # Reject images larger than this (pixels) before decoding them — guards against
 # decompression bombs. 40 MP comfortably covers any real phone/camera photo.
 MAX_PIXELS = 40_000_000
@@ -100,6 +105,9 @@ def _prepare(image_bytes: bytes) -> Image.Image:
         scale = MAX_EDGE_PX / longest
         # clamp to >=1 so an extreme aspect ratio can't produce a 0-px edge
         img = img.resize((max(1, int(img.width * scale)), max(1, int(img.height * scale))))
+    elif longest < MIN_EDGE_PX:
+        scale = MIN_EDGE_PX / longest                       # enlarge low-res uploads
+        img = img.resize((int(img.width * scale), int(img.height * scale)), Image.LANCZOS)
     return img
 
 
