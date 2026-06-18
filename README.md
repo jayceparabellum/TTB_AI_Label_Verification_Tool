@@ -69,13 +69,13 @@ The goal is **< 1% margin of error, < 5 s latency**. The key idea: every result 
 either a **confident verdict** (the system commits to correct/WRONG) or a
 **deferral to human review** (low OCR confidence, or a region that didn't read).
 *Margin of error counts only confident verdicts* — a deferral is the system
-declining to guess, not an error. Over 14 cases (3 clean + 10 degraded + 1 real
-bottle photo):
+declining to guess, not an error. Over 15 cases (3 clean + 10 degraded + 2 real
+bottle photos):
 
 - **Margin of error — 0.00%** (0 wrong of 11 confident verdicts). **Meets the < 1% goal.**
 - **Logic-on-clean accuracy — 100%** (9/9 field decisions on cleanly-read text).
-- **Coverage — 11/14 committed confidently; 3/14 routed to human review** (two
-  degraded photos whose warning region didn't OCR, plus the real bottle photo).
+- **Coverage — 11/15 committed confidently; 4/15 routed to human review** (two
+  degraded photos whose warning region didn't OCR, plus two real bottle photos).
 - **Max latency — ~430 ms** (budget 5000 ms), well under the bar.
 
 Per-case outcomes on the degraded set (a ✗ cell is an OCR misread; the *outcome*
@@ -104,9 +104,10 @@ system **defers to NEEDS REVIEW** instead of confidently flagging a possibly-
 compliant label as non-compliant. An OpenCV deskew stage lifts confident-correct
 verdicts from 9/13 to 11/13 (ablation-tuned in `eval/ablate.py`).
 
-The set includes one **real bottle photo** (a Jack Daniel's Old No. 7, in
-`eval/images/real/`): ABV reads `40%`, but the stylized brand can't be read, so it
-correctly **routes to human review** rather than guessing — the measured real-world
+The set includes two **real bottle photos** (in `eval/images/real/`): a Jack
+Daniel's Old No. 7 (ABV reads `40%`, but the stylized brand can't be read) and a
+Cîroc vodka (thin silver-on-glass label that OCRs poorly even at 900×1200). Both
+correctly **route to human review** rather than guessing — the measured real-world
 gap, surfaced as *coverage*, not hidden in the error rate. Drop more photos into
 `eval/images/real/` with a `brand|abv|exp_brand,exp_alcohol,exp_warning` sidecar to
 extend the set.

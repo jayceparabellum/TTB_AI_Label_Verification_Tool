@@ -6,25 +6,26 @@ Each verdict is *confident* (the system commits to correct/WRONG) or a *deferral
 
 | case | kind | brand | abv | warning | outcome | ms |
 |------|------|-------|-----|---------|---------|----|
-| clean_pass | clean | ok | ok | ok | ✓ correct | 172 |
+| clean_pass | clean | ok | ok | ok | ✓ correct | 176 |
 | abv_mismatch | clean | ok | ok | ok | ✓ correct | 165 |
-| bad_warning | clean | ok | ok | ok | ✓ correct | 167 |
-| degraded_rotate | degraded | ok | ok | ok | ✓ correct | 175 |
-| degraded_rotate_heavy | degraded | ok | ok | ok | ✓ correct | 181 |
-| degraded_blur | degraded | ok | ok | ok | ✓ correct | 169 |
+| bad_warning | clean | ok | ok | ok | ✓ correct | 162 |
+| degraded_rotate | degraded | ok | ok | ok | ✓ correct | 179 |
+| degraded_rotate_heavy | degraded | ok | ok | ok | ✓ correct | 184 |
+| degraded_blur | degraded | ok | ok | ok | ✓ correct | 170 |
 | degraded_jpeg | degraded | ok | ok | WRONG(got False) | ↪ review | 77 |
-| degraded_lowcontrast | degraded | ok | ok | ok | ✓ correct | 165 |
-| degraded_perspective | degraded | ok | ok | ok | ✓ correct | 162 |
+| degraded_lowcontrast | degraded | ok | ok | ok | ✓ correct | 167 |
+| degraded_perspective | degraded | ok | ok | ok | ✓ correct | 163 |
 | degraded_glare | degraded | ok | ok | ok | ✓ correct | 168 |
-| degraded_shadow | degraded | WRONG(got False) | ok | WRONG(got False) | ↪ review | 154 |
-| degraded_noise | degraded | ok | ok | ok | ✓ correct | 199 |
-| degraded_blur_rotate | degraded | ok | ok | ok | ✓ correct | 184 |
-| jack_daniels | real | WRONG(got False) | ok | ok | ↪ review | 428 |
+| degraded_shadow | degraded | WRONG(got False) | ok | WRONG(got False) | ↪ review | 150 |
+| degraded_noise | degraded | ok | ok | ok | ✓ correct | 202 |
+| degraded_blur_rotate | degraded | ok | ok | ok | ✓ correct | 178 |
+| ciroc | real | WRONG(got False) | WRONG(got False) | ok | ↪ review | 232 |
+| jack_daniels | real | WRONG(got False) | ok | ok | ↪ review | 419 |
 
 - **Margin of error (wrong ÷ confident verdicts):** 0/11 = **0.00%**  → **PASS** (< 1%)
 - **Logic-on-clean accuracy:** 9/9 = **100.0%** (decision logic on clean reads)
-- **Coverage:** 11/14 verdicts committed confidently; 3/14 routed to human review (unreadable region or low confidence)
-- **Max latency:** 428 ms (budget 5000 ms) -> PASS
+- **Coverage:** 11/15 verdicts committed confidently; 4/15 routed to human review (unreadable region or low confidence)
+- **Max latency:** 419 ms (budget 5000 ms) -> PASS
 
 _Preprocessing (deskew) lifts confident-correct verdicts on the synthetic set from 9/13 (OFF) to 11/13 (ON)._
 
