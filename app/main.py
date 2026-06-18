@@ -54,7 +54,9 @@ def text_form(request: Request):
 PROMPT_CHIPS = [
     ("Verify the Clean Pass sample", "clean_pass"),
     ("Verify the Wrong-ABV sample", "abv_mismatch"),
-    ("Verify the Bad-Warning sample", "bad_warning"),
+    ("What does a wine label need?", ""),
+    ("Verify all the sample labels", ""),
+    ("Show only the flagged ones", ""),
 ]
 
 

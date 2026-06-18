@@ -15,7 +15,9 @@ from langchain_core.tools import tool
 from langgraph.prebuilt import InjectedState
 
 from app import ocr as _ocr
+from app import batch as _batch
 from app.matching import match_government_warning as _match_warning
+from app.samples import SAMPLES as _SAMPLES
 from app.verify import verify_label as _core_verify_label
 from . import audit
 from .images import STORE
@@ -172,9 +174,49 @@ def explain_flag(field: str, failure_reason: str) -> dict:
     return generate.explain_flag(field, failure_reason)
 
 
+@tool
+def batch_verify() -> dict:
+    """Verify all loaded sample labels at once and summarize the results. Expensive
+    action — human-gated. Afterwards, call list_flagged to see only the problems."""
+    global LAST_BATCH
+    uploaded = [(s.filename, s.path.read_bytes()) for s in _SAMPLES.values()]
+    csv = "filename,brand,alcohol_content\n" + "\n".join(
+        f"{s.filename},{s.brand},{s.alcohol_content}" for s in _SAMPLES.values())
+    LAST_BATCH = _batch.run_batch(uploaded, csv.encode())
+    s = LAST_BATCH.summary
+    return {"total": s.get("total", 0), "passed": s.get("passed", 0),
+            "flagged": s.get("flagged", 0), "needs_review": s.get("needs_review", 0),
+            "errors": s.get("errors", 0)}
+
+
+_KNOWN_WINE_TYPES = {
+    "table wine", "red wine", "white wine", "rose wine", "rosé wine",
+    "sparkling wine", "dessert wine", "fortified wine",
+}
+
+
+@tool
+def validate_class_type(claimed_designation: str, beverage_type: str = "wine") -> dict:
+    """Assess a claimed class/type designation against the standards of identity —
+    ADVISORY ONLY (status OK or REVIEW), never an automatic rejection. Returns the
+    controlling citation; a human decides."""
+    from rag import generate
+
+    norm = claimed_designation.strip().lower()
+    grounded = generate.explain_flag("class type designation",
+                                     f"{beverage_type} {claimed_designation}")
+    citations = grounded.get("citations", [])
+    if norm in _KNOWN_WINE_TYPES:
+        return {"status": "OK", "advisory": True, "citations": citations,
+                "assessment": f"'{claimed_designation}' is a recognized class/type."}
+    return {"status": "REVIEW", "advisory": True, "citations": citations,
+            "assessment": (f"'{claimed_designation}' is not a simple recognized "
+                           "class/type — recommend human review against the standards "
+                           "of identity. This is advisory; it is never an auto-rejection.")}
+
+
 READ_TOOLS = [verify_label, extract_label_fields, verify_warning, list_flagged,
-              regulatory_lookup, explain_flag]
-WRITE_TOOLS = [override_result, manual_fallback]
+              regulatory_lookup, explain_flag, validate_class_type]
+WRITE_TOOLS = [override_result, manual_fallback, batch_verify]
 WRITE_TOOL_NAMES = {t.name for t in WRITE_TOOLS}
 ALL_TOOLS = READ_TOOLS + WRITE_TOOLS
-# Phase C will REPLACE the regulatory_lookup / explain_flag stubs with real RAG.

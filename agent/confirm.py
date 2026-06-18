@@ -20,6 +20,10 @@ def _summary(call: dict) -> str:
     if call["name"] == "override_result":
         return (f"Override result {a.get('result_id') or '(current)'} to "
                 f"{a.get('new_status', '?')} — reason: {a.get('reason') or '(none given)'}")
+    if call["name"] == "manual_fallback":
+        return f"Record a manual entry: {a.get('field', '?')} = {a.get('value', '?')}"
+    if call["name"] == "batch_verify":
+        return "Verify all loaded sample labels as a batch"
     return f"{call['name']}({a})"
 
 
