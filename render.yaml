@@ -3,6 +3,6 @@ services:
     name: ttb-label-verification
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: free
+    plan: starter            # free's 0.1 CPU is too throttled for OCR (see README)
     healthCheckPath: /health
-    autoDeploy: false
+    autoDeploy: true         # deploys on push to main
