@@ -226,10 +226,17 @@ OCR (see the latency note below). It **auto-deploys on push to `main`**; you can
 trigger a deploy from the Render dashboard or with `scripts/deploy_render.sh` (after
 `render login`). Health check at `/health`; live URL at the top of this README.
 
-The **conversational agent** needs a local Ollama model, which the Starter host
-can't run — there the chat degrades gracefully and the button verifier is the path.
-To run the full three-layer stack (verifier + agent + RAG) on one ~4 GB box, use
-the dedicated agent image. It bundles Ollama and **bakes the model into the image
+The **conversational agent** needs a chat model. By default it uses a **local
+Ollama** model (fully offline) — which the Starter host can't run, so there the
+chat would degrade gracefully and the button verifier is the path. For a deployed
+host with no local model, set **`LLM_BACKEND=anthropic`** plus an **`ANTHROPIC_API_KEY`**
+secret and the agent uses **Claude** via the cloud API (`agent/llm.py`); the live
+demo runs this way. This is an explicit, opt-in relaxation of "fully offline" for
+the deployed demo only — local and air-gapped runs leave `LLM_BACKEND` unset and
+stay 100% offline.
+
+To instead run the full three-layer stack (verifier + agent + RAG) **offline** on
+one ~4 GB box, use the dedicated agent image. It bundles Ollama and **bakes the model into the image
 at build time**, so the running container makes zero outbound calls:
 
 ```bash
@@ -321,11 +328,12 @@ does not do:
   result defers to NEEDS REVIEW rather than guessing.) The bundled samples and most
   of the eval set are clean/degraded *flat* labels — expect more NEEDS-REVIEW
   outcomes on real bottle photography.
-- **Agent/RAG: two pieces are host-deferred, documented honestly.** (1) The chat
-  agent needs a local **Ollama** model; the deployed button-UI host (Render Starter)
-  can't run one, so on that instance the chat degrades gracefully and the button
-  verifier is the path — running the full agent needs a ~4 GB host
-  (`bash scripts/setup_ollama.sh`). (2) RAG retrieval runs **BM25-only by default**;
+- **Agent/RAG: model hosting is a deliberate trade.** (1) The chat agent needs a
+  chat model: **local Ollama** by default (fully offline, needs a ~4 GB host —
+  `bash scripts/setup_ollama.sh`), **or** cloud **Claude** on a lean deployed host
+  via `LLM_BACKEND=anthropic` + an `ANTHROPIC_API_KEY` secret (the live demo). Cloud
+  mode is an explicit opt-in that relaxes "fully offline" for that deploy only. (2)
+  RAG retrieval runs **BM25-only by default**;
   the **dense BGE-small** backend (`rag/dense.py`, fused with BM25 via RRF) is fully
   implemented and turns on automatically once `pip install sentence-transformers`
   makes the embedder importable (`RAG_DENSE=auto`). The model downloads once and then
