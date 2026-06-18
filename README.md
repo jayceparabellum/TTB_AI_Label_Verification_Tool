@@ -190,7 +190,11 @@ every change.
 
 ## Deploy
 
-Docker bundles the Tesseract binary so it survives a locked-down runtime.
+Docker bundles the Tesseract binary so it survives a locked-down runtime. The
+standard image ships all three layers — the button verifier plus the `/chat`
+panel and the BM25 RAG corpus — so the chat works wherever it's deployed; the LLM
+(Ollama) and dense embeddings are simply absent on a lean host, so chat degrades
+gracefully and RAG runs BM25-only.
 
 ```bash
 docker build -t ttb-label-verification .
