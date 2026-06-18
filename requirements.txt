@@ -7,3 +7,10 @@ pytesseract==0.3.13
 rapidfuzz==3.11.0
 opencv-python-headless==4.11.0.86
 numpy==2.2.1
+
+# --- Layer 2: conversational agent (Phase A) ---
+langgraph==1.2.5
+langgraph-checkpoint-sqlite==3.1.0
+langchain-core==1.4.7
+langchain-ollama==1.1.0
+# Layer 3 (RAG) deps are added in Phase C: sentence-transformers, chromadb, rank-bm25

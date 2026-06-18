@@ -11,7 +11,7 @@ import base64
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -47,6 +47,33 @@ def text_form(request: Request):
     return templates.TemplateResponse(
         request, "text.html",
         {"nav": "text", "official_warning": OFFICIAL_GOVERNMENT_WARNING},
+    )
+
+
+# --- Conversational agent (Layer 2, additive to the button UI) ----------------
+PROMPT_CHIPS = [
+    ("Verify the Clean Pass sample", "clean_pass"),
+    ("Verify the Wrong-ABV sample", "abv_mismatch"),
+    ("Verify the Bad-Warning sample", "bad_warning"),
+]
+
+
+@app.get("/chat", response_class=HTMLResponse)
+def chat_page(request: Request):
+    return templates.TemplateResponse(
+        request, "agent.html", {"nav": "chat", "chips": PROMPT_CHIPS},
+    )
+
+
+@app.post("/agent/chat")
+def agent_chat(message: str = Form(...), image_id: str = Form("")):
+    """Stream one agent turn as Server-Sent Events (visible tool steps + text)."""
+    from .agent_chat import stream_chat
+
+    return StreamingResponse(
+        stream_chat(message, image_id or None),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 

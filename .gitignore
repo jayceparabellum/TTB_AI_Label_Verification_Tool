@@ -16,3 +16,6 @@ build/
 eval/images/*
 !eval/images/real/
 .claude/settings.local.json
+
+# Local agent persistence (checkpoints, audit, vector store) — never committed
+.agent_data/

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Assistant — TTB Label Verification{% endblock %}
+{% block content %}
+  <h1>Verification assistant</h1>
+  <p class="lead">
+    Ask in plain language — the assistant runs the same checks as the buttons and
+    shows its work. It never decides pass/fail on its own; every verdict comes from
+    the verifier, and a person approves any change.
+  </p>
+
+  <div class="chat" id="chat">
+    <div class="chat-log" id="chat-log" aria-live="polite"></div>
+
+    <div class="chat-chips" id="chat-chips">
+      {% for label, image_id in chips %}
+      <button type="button" class="chip" data-image="{{ image_id }}">{{ label }}</button>
+      {% endfor %}
+    </div>
+
+    <form class="chat-form" id="chat-form" autocomplete="off">
+      <input type="text" id="chat-input" name="message"
+             placeholder="e.g. Verify the Clean Pass sample" aria-label="Message">
+      <input type="hidden" id="chat-image" name="image_id" value="">
+      <button type="submit" class="btn-primary" id="chat-send">Send</button>
+    </form>
+  </div>
+
+  <p class="hint">The button verifier on the <a href="/">home page</a> is always
+    available and returns in under 5 seconds — the assistant is an add-on.</p>
+{% endblock %}
+{% block scripts %}<script src="/static/agent.js" defer></script>{% endblock %}
