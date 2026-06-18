@@ -273,10 +273,10 @@ def main() -> None:
         f"from {off['conf_correct']}/{len(synthetic)} (OFF) to {on['conf_correct']}/"
         f"{len(synthetic)} (ON)._",
         "",
-        "_The hard photos that defer (2 degraded warning regions that didn't OCR, 1 real "
-        "bottle photo) are correctly sent to a human rather than confidently mis-flagged. "
-        "That is the measured real-world gap — surfaced as coverage, not hidden in the "
-        "error rate._",
+        f"_The {review} hard photos that defer (degraded warning regions that didn't OCR, "
+        f"plus real bottle photos) are correctly sent to a human rather than confidently "
+        f"mis-flagged. That is the measured real-world gap — surfaced as coverage, not "
+        f"hidden in the error rate._",
     ]
 
     report = "\n".join(lines)
