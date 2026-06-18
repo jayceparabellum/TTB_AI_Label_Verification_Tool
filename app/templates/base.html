@@ -3,14 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark light">
   <title>{% block title %}TTB Label Verification{% endblock %}</title>
-  {# Resolve the theme before paint (no flash): saved choice, else OS preference. #}
-  <script>(function(){try{var t=localStorage.getItem('theme');document.documentElement.dataset.theme=t||(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');}catch(e){document.documentElement.dataset.theme='dark';}})();</script>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header no-print">
     <a class="wordmark" href="/">
       <span class="mark">TTB</span>
@@ -21,14 +17,11 @@
       <a href="/text"{% if nav is defined and nav == 'text' %} class="active"{% endif %}>Text</a>
       <a href="/batch"{% if nav is defined and nav == 'batch' %} class="active"{% endif %}>Batch</a>
       <a href="/chat"{% if nav is defined and nav == 'chat' %} class="active"{% endif %}>Chat</a>
-      <button type="button" class="theme-toggle" id="theme-toggle"
-              aria-label="Toggle light or dark theme" title="Toggle theme">◐</button>
     </nav>
   </header>
-  <main id="main" class="container{% if wide is defined and wide %} container-wide{% endif %}">
+  <main class="container{% if wide is defined and wide %} container-wide{% endif %}">
     {% block content %}{% endblock %}
   </main>
-  <script src="/static/theme.js" defer></script>
   {% block scripts %}{% endblock %}
 
   {# Global pop-out assistant. Shown on every page except the dedicated /chat
