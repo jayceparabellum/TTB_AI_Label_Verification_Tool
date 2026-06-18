@@ -29,9 +29,12 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-# Dense RAG (BGE-small via sentence-transformers + chromadb) is host-deferred;
-# retrieval is BM25-only and offline by default. To enable on a larger host, add:
-#   RUN pip install --no-cache-dir sentence-transformers chromadb
+# Dense RAG (BGE-small, fused with BM25 via RRF) is implemented but its embedding
+# dep is optional to keep this image lean; retrieval is BM25-only until you add it.
+# To enable (dense then turns on automatically via RAG_DENSE=auto):
+#   RUN pip install --no-cache-dir sentence-transformers
+# Bake the model in at build time so the container stays offline at run time:
+#   RUN python -c "from sentence_transformers import SentenceTransformer as S; S('BAAI/bge-small-en-v1.5')"
 
 # All three layers + the committed RAG corpus (rag/corpus/*.json).
 COPY app ./app

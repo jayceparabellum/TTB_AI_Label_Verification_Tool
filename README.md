@@ -61,7 +61,7 @@ and point the app at it — `app/ocr.py` auto-detects a Tesseract under
 ## Tests and evaluation
 
 ```bash
-pytest                    # 142 unit + end-to-end tests
+pytest                    # 153 unit + end-to-end tests
 python eval/run_eval.py   # goal metrics + latency report -> eval/REPORT.md
 ```
 
@@ -168,10 +168,12 @@ every change.
   (`override_result`, `manual_fallback`, `batch_verify`) the graph calls `interrupt()`
   and resumes only on an explicit human **Approve** — the agent can never auto-commit.
   Every write is recorded to an **append-only audit log** (who/what/when/why).
-- **Citation-grounded RAG, cite-or-refuse.** Hybrid retrieval (BM25 now; dense
-  BGE-small/Chroma host-deferred) over a committed, citation-tagged 27 CFR corpus
-  spanning the health warning (Part 16) and per-commodity labeling for wine (Part 4),
-  distilled spirits (Part 5), and malt beverages (Part 7). `regulatory_lookup` and
+- **Citation-grounded RAG, cite-or-refuse.** Hybrid retrieval — BM25 fused with
+  dense **BGE-small** embeddings via reciprocal-rank fusion (`rag/dense.py`; BM25-only
+  until `pip install sentence-transformers`, then auto-on via `RAG_DENSE`) — over a
+  committed, citation-tagged 27 CFR corpus spanning the health warning (Part 16) and
+  per-commodity labeling for wine (Part 4), distilled spirits (Part 5), and malt
+  beverages (Part 7). `regulatory_lookup` and
   `explain_flag` answer **only** from retrieved chunks, always cite the controlling
   section, and **refuse** ("not found in the regulations on file") when unsupported —
   never reciting regulation from memory. RAG eval: hit-rate 100%, faithfulness 100%,
@@ -267,10 +269,13 @@ Everything stays local — no outbound calls at request time.
   agent needs a local **Ollama** model; the deployed button-UI host (Render Starter)
   can't run one, so on that instance the chat degrades gracefully and the button
   verifier is the path — running the full agent needs a ~4 GB host
-  (`bash scripts/setup_ollama.sh`). (2) RAG retrieval is **BM25-only** until the
-  **dense BGE-small/Chroma** backend is enabled on a provisioned host (the
-  `DenseBackend` seam in `rag/retrieve.py`); BM25 is strong for term-heavy
-  regulatory queries, dense would add synonym recall.
+  (`bash scripts/setup_ollama.sh`). (2) RAG retrieval runs **BM25-only by default**;
+  the **dense BGE-small** backend (`rag/dense.py`, fused with BM25 via RRF) is fully
+  implemented and turns on automatically once `pip install sentence-transformers`
+  makes the embedder importable (`RAG_DENSE=auto`). The model downloads once and then
+  runs offline; at this corpus size the vector store is an exact in-memory numpy
+  cosine (Chroma persistence is a deferred optimization, not needed yet). BM25 is
+  strong for term-heavy regulatory queries; dense adds synonym/paraphrase recall.
 - **RAG corpus is a curated excerpt, not the full live eCFR.** The committed corpus
   is 27 CFR Part 16 + labeling slices of Parts 4 (wine), 5 (distilled spirits), and 7
   (malt beverages), citation-accurate and offline; §16.21 is verbatim. The post-2020
