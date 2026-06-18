@@ -1,0 +1,4 @@
+filename,brand,alcohol_content
+clean_pass.png,Stone's Throw,5.0
+abv_mismatch.png,Stone's Throw,5.0
+bad_warning.png,Stone's Throw,5.0

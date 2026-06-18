@@ -106,6 +106,48 @@ def test_reverify_low_confidence_shows_needs_review_banner():
     assert "banner-review" in r.text
 
 
+# --- Batch verification web flow (U2/U3) --------------------------------------
+def _sample_file(field, name):
+    return (field, (f"{name}.png", (SAMPLES / f"{name}.png").read_bytes(), "image/png"))
+
+
+def test_batch_form_lists_inputs_and_cap():
+    html = client.get("/batch").text
+    assert 'name="images"' in html and "multiple" in html
+    assert 'name="mapping"' in html
+    assert "batch-template.csv" in html
+
+
+def test_batch_run_renders_table_and_summary():
+    csv = b"filename,brand,alcohol_content\nclean_pass.png,Stone's Throw,5.0\nabv_mismatch.png,Stone's Throw,5.0\n"
+    files = [
+        _sample_file("images", "clean_pass"),
+        _sample_file("images", "abv_mismatch"),
+        ("mapping", ("m.csv", csv, "text/csv")),
+    ]
+    r = client.post("/batch", files=files)
+    assert r.status_code == 200
+    assert "2 label(s) checked" in r.text
+    assert "clean_pass.png" in r.text and "abv_mismatch.png" in r.text
+    assert "attnFilter" in r.text                      # filter control present
+    assert "Download results CSV" in r.text            # U3 export link
+
+
+def test_batch_run_malformed_csv_is_friendly():
+    files = [_sample_file("images", "clean_pass"),
+             ("mapping", ("m.csv", b"no proper header here\n", "text/csv"))]
+    r = client.post("/batch", files=files)
+    assert r.status_code == 200
+    assert "Couldn't run the batch" in r.text
+
+
+def test_batch_run_over_cap_message():
+    files = [_sample_file("images", "clean_pass") for _ in range(26)]
+    files.append(("mapping", ("m.csv", b"filename,brand,alcohol_content\nclean_pass.png,X,5\n", "text/csv")))
+    r = client.post("/batch", files=files)
+    assert "limited to 25" in r.text
+
+
 def test_upload_low_confidence_shows_needs_review_banner():
     from PIL import Image, ImageFilter
     import io
