@@ -1,0 +1,69 @@
+# Agent host image — the full three-layer stack on one ~4 GB box:
+#   Layer 1 deterministic verifier (Tesseract) + Layer 2 agent (local Ollama) +
+#   Layer 3 RAG (BM25 over the committed 27 CFR corpus).
+# The lean button-UI image is the default `Dockerfile` (Render Starter); this one
+# additionally bundles Ollama and bakes the model into the image at build time so
+# the running container makes ZERO outbound calls.
+#
+#   docker build -f Dockerfile.agent -t ttb-label-agent .
+#   docker run -p 8000:8000 ttb-label-agent
+#
+# Pick the model at build time (after the host spike): --build-arg OLLAMA_MODEL=qwen2.5:3b-instruct
+FROM python:3.12-slim
+
+ARG OLLAMA_MODEL=llama3.2:3b
+ENV OLLAMA_MODEL=${OLLAMA_MODEL}
+
+# System deps: Tesseract (OCR, local), image libs, and curl/ca-certificates so we
+# can install Ollama at build time and health-check it at boot.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       tesseract-ocr fonts-dejavu-core libglib2.0-0 libgl1 \
+       curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install the Ollama runtime (build-time network; the binary runs fully local).
+RUN curl -fsSL https://ollama.com/install.sh | sh
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+# Dense RAG (BGE-small via sentence-transformers + chromadb) is host-deferred;
+# retrieval is BM25-only and offline by default. To enable on a larger host, add:
+#   RUN pip install --no-cache-dir sentence-transformers chromadb
+
+# All three layers + the committed RAG corpus (rag/corpus/*.json).
+COPY app ./app
+COPY agent ./agent
+COPY rag ./rag
+COPY scripts ./scripts
+
+# Bundle the sample images at build time.
+RUN python scripts/generate_samples.py
+
+# Bake the Ollama model into the image at build time — never at request time.
+# setup_ollama.sh needs a running server, so start one transiently, pull, then
+# stop it by its captured PID (no procps/pkill in the slim base). setup_ollama.sh
+# uses `set -o pipefail`, so it must run under bash, not dash.
+RUN set -e; \
+    OLLAMA_HOST=127.0.0.1:11434 ollama serve & \
+    srv=$!; \
+    until curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1; do sleep 1; done; \
+    OLLAMA_MODEL="${OLLAMA_MODEL}" bash scripts/setup_ollama.sh; \
+    kill "$srv"
+
+# Session checkpoints + the append-only audit log live here. Mount a volume to
+# persist the audit trail across restarts: -v ttb_agent_data:/app/.agent_data
+ENV AGENT_CHECKPOINT_DB=/app/.agent_data/checkpoints.sqlite \
+    AGENT_AUDIT_DB=/app/.agent_data/audit.sqlite \
+    OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+    OFFLINE=1 \
+    PORT=8000
+VOLUME ["/app/.agent_data"]
+
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD curl -fsS "http://127.0.0.1:${PORT:-8000}/health" || exit 1
+
+CMD ["sh", "scripts/agent_entrypoint.sh"]

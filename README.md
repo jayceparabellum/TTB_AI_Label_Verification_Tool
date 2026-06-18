@@ -200,8 +200,19 @@ throttled for OCR — see the latency note below). Health check at `/health`.
 
 The **conversational agent** needs a local Ollama model, which the Starter host
 can't run — there the chat degrades gracefully and the button verifier is the path.
-To run the full agent + RAG, deploy on a ~4 GB host and provision the model first:
-`bash scripts/setup_ollama.sh` (everything stays local; no outbound calls).
+To run the full three-layer stack (verifier + agent + RAG) on one ~4 GB box, use
+the dedicated agent image. It bundles Ollama and **bakes the model into the image
+at build time**, so the running container makes zero outbound calls:
+
+```bash
+docker build -f Dockerfile.agent -t ttb-label-agent .   # add --build-arg OLLAMA_MODEL=qwen2.5:3b-instruct to swap
+docker run -p 8000:8000 -v ttb_agent_data:/app/.agent_data ttb-label-agent
+```
+
+The volume persists the append-only audit log and session checkpoints across
+restarts. RAG retrieval is BM25-only by default; the dense BGE-small/Chroma
+backend is host-deferred (uncomment the `pip install` in `Dockerfile.agent`).
+Everything stays local — no outbound calls at request time.
 
 ---
 
