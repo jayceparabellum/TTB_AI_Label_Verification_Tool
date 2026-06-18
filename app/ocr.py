@@ -111,10 +111,12 @@ def _prepare(image_bytes: bytes) -> Image.Image:
     return img
 
 
-# psm 6 ("assume a single uniform block of text") is ~1.7x faster than the
-# default auto-segmentation on a label and keeps verdicts correct — it matters
-# on CPU-constrained hosts (e.g. small cloud instances).
-_TESS_CONFIG = "--psm 6"
+# psm 4 ("a single column of text of variable sizes") matches a label's layout: a
+# large brand heading over smaller body/warning text. psm 6 ("a single *uniform*
+# block") silently drops the oversized heading for some glyph layouts — the brand
+# text never reaches the matcher, producing a confident false-FLAG on a compliant
+# brand. psm 4 reads the heading at the same latency.
+_TESS_CONFIG = "--psm 4"
 
 # Mean word confidence (Tesseract reports 0-100) below this marks the read as
 # marginal -> the verdict becomes "needs human review" rather than a hard

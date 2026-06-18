@@ -102,6 +102,44 @@ def test_low_confidence_image_needs_review():
     assert r.overall_pass is False        # needs_review supersedes PASS
 
 
+def test_large_brand_heading_is_read_not_dropped():
+    # Regression: a label with a LARGE brand heading over smaller body text must
+    # have its brand read. Under --psm 6 ("assume a single uniform block of text")
+    # Tesseract silently dropped the oversized heading for some glyph layouts ->
+    # the brand text never reached the matcher -> a confident false-FLAG on a
+    # compliant brand. --psm 4 (single column, variable sizes) reads it.
+    import io
+    from PIL import Image, ImageDraw, ImageFont
+
+    fdir = Path("/usr/share/fonts/truetype/dejavu")
+    if not (fdir / "DejaVuSans-Bold.ttf").exists():
+        pytest.skip("DejaVu fonts not installed")
+
+    def font(sz, bold=False):
+        name = "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"
+        return ImageFont.truetype(str(fdir / name), sz)
+
+    import textwrap
+
+    from app.reference import OFFICIAL_GOVERNMENT_WARNING
+
+    img = Image.new("RGB", (1000, 700), "white")
+    d = ImageDraw.Draw(img)
+    d.rectangle([8, 8, 992, 692], outline="black", width=3)
+    d.text((500, 110), "Cedar Hollow", font=font(64, bold=True), fill="black", anchor="mm")
+    d.text((500, 210), "Craft Lager", font=font(34), fill="black", anchor="mm")
+    d.text((500, 300), "ALC 5.0% BY VOL", font=font(40, bold=True), fill="black", anchor="mm")
+    d.text((500, 360), "12 FL OZ", font=font(28), fill="black", anchor="mm")
+    y = 430  # the warning block is what skews psm 6's "uniform block" off the heading
+    for line in textwrap.wrap(OFFICIAL_GOVERNMENT_WARNING, width=78):
+        d.text((40, y), line, font=font(22), fill="black")
+        y += 30
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    r = verify_label(buf.getvalue(), brand="Cedar Hollow", alcohol_content="5.0")
+    assert {f.field: f.passed for f in r.fields}["brand"] is True
+
+
 def test_uneven_lighting_shadow_is_corrected_and_reads():
     # A left->right darkening gradient (shadow on one side) used to suppress the
     # start of the label: the brand OCR'd as "ne's Throw" (not "Stone's Throw")
