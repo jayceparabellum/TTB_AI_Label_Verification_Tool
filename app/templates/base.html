@@ -23,5 +23,49 @@
     {% block content %}{% endblock %}
   </main>
   {% block scripts %}{% endblock %}
+
+  {# Global pop-out assistant. Shown on every page except the dedicated /chat
+     page (which already is the full assistant), so there's never a double UI. #}
+  {% if nav is not defined or nav != 'chat' %}
+  <div id="cw-root" class="cw-root no-print" data-state="closed">
+    <button type="button" id="cw-launcher" class="cw-launcher"
+            aria-label="Open the verification assistant">
+      <span class="cw-launcher-dot" aria-hidden="true">💬</span>
+      <span class="cw-launcher-text">Assistant</span>
+    </button>
+
+    <section id="cw-panel" class="cw-panel" role="dialog"
+             aria-label="Verification assistant" aria-modal="false">
+      <header class="cw-header">
+        <span class="cw-title">Verification assistant</span>
+        <span class="cw-header-actions">
+          <button type="button" id="cw-min" class="cw-iconbtn"
+                  aria-label="Minimize assistant" title="Minimize">–</button>
+          <button type="button" id="cw-close" class="cw-iconbtn"
+                  aria-label="Close and clear assistant" title="Close &amp; clear">✕</button>
+        </span>
+      </header>
+
+      <div class="cw-log" id="cw-log" aria-live="polite"></div>
+
+      <div class="cw-chips" id="cw-chips">
+        {% for label, image_id in prompt_chips %}
+        <button type="button" class="cw-chip" data-image="{{ image_id }}">{{ label }}</button>
+        {% endfor %}
+      </div>
+
+      <form class="cw-form" id="cw-form" autocomplete="off">
+        <input type="text" id="cw-input" name="message"
+               placeholder="Ask the assistant…" aria-label="Message">
+        <input type="hidden" id="cw-image" name="image_id" value="">
+        <button type="submit" class="cw-send" id="cw-send" aria-label="Send">▸</button>
+      </form>
+
+      <p class="cw-foot">Explanations only — every verdict comes from the verifier,
+        and you approve any change.</p>
+    </section>
+  </div>
+  <script src="/static/chat-widget.js" defer></script>
+  {% endif %}
 </body>
 </html>
