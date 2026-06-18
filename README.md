@@ -61,7 +61,7 @@ and point the app at it — `app/ocr.py` auto-detects a Tesseract under
 ## Tests and evaluation
 
 ```bash
-pytest                    # 75 unit + end-to-end tests
+pytest                    # 135 unit + end-to-end tests
 python eval/run_eval.py   # goal metrics + latency report -> eval/REPORT.md
 ```
 
@@ -143,8 +143,44 @@ app/
   models.py      # VerificationResult
   main.py        # FastAPI routes + templates
 eval/            # labeled set + honest accuracy/latency report
+agent/           # Layer 2 — LangGraph chat agent (graph, tools, confirm gate, audit)
+rag/             # Layer 3 — local citation-grounded knowledge layer
 tests/           # unit + end-to-end tests
 ```
+
+---
+
+## AI assistant (Layer 2) + regulatory knowledge (Layer 3)
+
+On top of the deterministic core, an additive **conversational agent** (`/chat`)
+lets an agent drive every feature in plain language, and a local **RAG knowledge
+layer** answers regulatory questions with citations. The governing rule everywhere:
+**the LLM orchestrates and explains; it never adjudicates.** Pass/fail is always the
+deterministic core's; RAG grounds explanations but gets no vote; a human commits
+every change.
+
+- **LangGraph agent, local model.** Tools *wrap* the core (single source of truth):
+  `verify_label` returns the identical verdict to the button UI. The model is local
+  **Ollama** (`langchain-ollama`); a `SqliteSaver` checkpointer keys session memory
+  and interrupt/resume by `thread_id`. Streaming SSE chat with **visible tool steps**;
+  vanilla JS, no build step. The button UI stays the primary, always-available path.
+- **Human-in-the-loop confirm gate.** Read tools flow through; before any **write**
+  (`override_result`, `manual_fallback`, `batch_verify`) the graph calls `interrupt()`
+  and resumes only on an explicit human **Approve** — the agent can never auto-commit.
+  Every write is recorded to an **append-only audit log** (who/what/when/why).
+- **Citation-grounded RAG, cite-or-refuse.** Hybrid retrieval (BM25 now; dense
+  BGE-small/Chroma host-deferred) over a committed, citation-tagged 27 CFR corpus
+  (Part 16 + Part 4 wine). `regulatory_lookup` and `explain_flag` answer **only** from
+  retrieved chunks, always cite the controlling section, and **refuse** ("not found in
+  the regulations on file") when unsupported — never reciting regulation from memory.
+  RAG eval: hit-rate 100%, faithfulness 100%, citation 100% (`eval/run_rag_eval.py`).
+- **Fully offline.** No outbound calls at runtime (local Tesseract, local BM25, local
+  Ollama) — proven by `tests/test_offline.py`, which blocks outbound sockets and runs
+  the verify + RAG paths.
+
+> The deterministic 5 s SLA is unaffected: verification is a single tool call **off**
+> the model path, and RAG stays off the hot path. When the model is unavailable, the
+> chat degrades gracefully and the button verifier keeps working.
 
 ---
 
@@ -162,9 +198,29 @@ docker run -p 8000:8000 ttb-label-verification
 The live instance runs on Render's **Starter** plan (free tier's 0.1 CPU is too
 throttled for OCR — see the latency note below). Health check at `/health`.
 
+The **conversational agent** needs a local Ollama model, which the Starter host
+can't run — there the chat degrades gracefully and the button verifier is the path.
+To run the full agent + RAG, deploy on a ~4 GB host and provision the model first:
+`bash scripts/setup_ollama.sh` (everything stays local; no outbound calls).
+
 ---
 
 ## Trade-offs & known limitations
+
+> **Master-brief Phase-1 mapping.** This repo *is* the brief's Layer-1
+> verification core. The function names differ from the brief's pseudo-names
+> (`extract_text`/`extract_text_data` ≈ `extract_fields`; `match_brand` +
+> `match_alcohol_content` ≈ `fuzzy_match`; `match_government_warning` ≈
+> `verify_warning_strict`), and OCR structures the three verdict-bearing fields
+> (brand, ABV, warning) rather than the brief's seven. **One deliberate deviation:**
+> the brief specifies a *strict, word-for-word* warning match, but the implemented
+> matcher is a **high-threshold fuzzy match (≥ 99% similarity)** anchored on the
+> ALL-CAPS `GOVERNMENT WARNING:` header. This was a measured choice — exact-substring
+> matching false-flagged compliant labels whenever OCR dropped a single character in
+> the 283-char §16.21 block; the fuzzy threshold tolerates that noise while still
+> failing Title-case, missing, or genuinely-altered warnings (see `eval/REPORT.md`,
+> 0% confident-error margin). The agent + RAG layers (Phases 2–3) are planned in
+> `docs/plans/2026-06-18-001-feat-conversational-agent-rag-plan.md` and not yet built.
 
 - **Bold-text detection is intentionally skipped.** The warning legally must also
   be **bold**, but font weight is unreliable to detect from a photographed label
@@ -194,10 +250,23 @@ throttled for OCR — see the latency note below). Health check at `/health`.
   result defers to NEEDS REVIEW rather than guessing.) The bundled samples and most
   of the eval set are clean/degraded *flat* labels — expect more NEEDS-REVIEW
   outcomes on real bottle photography.
+- **Agent/RAG: two pieces are host-deferred, documented honestly.** (1) The chat
+  agent needs a local **Ollama** model; the deployed button-UI host (Render Starter)
+  can't run one, so on that instance the chat degrades gracefully and the button
+  verifier is the path — running the full agent needs a ~4 GB host
+  (`bash scripts/setup_ollama.sh`). (2) RAG retrieval is **BM25-only** until the
+  **dense BGE-small/Chroma** backend is enabled on a provisioned host (the
+  `DenseBackend` seam in `rag/retrieve.py`); BM25 is strong for term-heavy
+  regulatory queries, dense would add synonym recall.
+- **RAG corpus is a curated excerpt, not the full live eCFR.** The committed corpus
+  is 27 CFR Part 16 + a Part 4 (wine) slice, citation-accurate and offline; §16.21 is
+  verbatim. The full live ingest of Parts 4/5/7/16 + the TTB Beverage Alcohol Manual
+  is the deferred build-time step. Every chunk carries a `source_url` to verify
+  against eCFR.
 - **Out of scope for this POC.** COLA / government-system integration and
   authentication are deliberately not built (candidate next steps). Batch
-  verification and the low-confidence "needs review" state — originally deferred —
-  are now implemented.
+  verification, the low-confidence "needs review" state, the conversational agent,
+  and the RAG layer — originally deferred — are now implemented.
 - **OCR is CPU-bound, so the host's CPU sets the latency.** On a normal CPU the
   full verify is ~200 ms (well under the 5 s budget). Tesseract is tuned for
   constrained hosts (`--psm 6`, single OpenMP thread). Note that a heavily

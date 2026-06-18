@@ -1,0 +1,63 @@
+"""Layer 3 — RAG: ingest metadata, term-heavy retrieval, and the cite-or-refuse
+contract (cites in-corpus, refuses out-of-corpus, faithful to chunks)."""
+
+from rag import generate
+from rag.ingest import load_corpus
+from rag.retrieve import Retriever
+
+
+def test_ingest_carries_citation_metadata():
+    chunks = load_corpus()
+    assert len(chunks) >= 6
+    by_section = {c.section: c for c in chunks}
+    assert "16.21" in by_section and "16.22" in by_section and "4.32" in by_section
+    # §16.21 is the verbatim official statement.
+    assert by_section["16.21"].text.startswith("GOVERNMENT WARNING:")
+    for c in chunks:
+        assert c.citation.startswith("27 CFR") and c.source_url.startswith("https://")
+
+
+def test_retrieval_finds_controlling_section_for_term_heavy_query():
+    r = Retriever()
+    top = r.retrieve("government warning capital letters bold", k=1)[0]
+    assert top.chunk.section == "16.22"
+    wine = {res.chunk.section for res in r.retrieve("wine label brand alcohol", k=3)}
+    assert "4.32" in wine
+
+
+def test_answer_in_corpus_is_cited():
+    res = generate.answer("what does a wine label need?", "wine")
+    assert res["status"] == "answered"
+    sections = {c["section"] for c in res["citations"]}
+    assert "4.32" in sections
+    # Faithful: every cited chunk's text is present (extractive, no invented claims).
+    by_section = {c.section: c for c in load_corpus()}
+    for s in sections:
+        assert by_section[s].text in res["answer"]
+
+
+def test_answer_refuses_out_of_corpus():
+    for q in ("what is the proof requirement for vodka?", "how do I bake bread?"):
+        res = generate.answer(q)
+        assert res["status"] == "refused"
+        assert res["answer"] == generate.REFUSAL and res["citations"] == []
+
+
+def test_explain_flag_caps_maps_to_16_22():
+    res = generate.explain_flag("government_warning", "header is Title case not ALL CAPS")
+    assert res["status"] == "answered"
+    assert res["citations"][0]["section"] == "16.22"
+
+
+def test_golden_eval_meets_thresholds():
+    import importlib.util
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "run_rag_eval", Path(__file__).resolve().parent.parent / "eval" / "run_rag_eval.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    m = mod.evaluate()
+    assert m["hit_rate"] >= 0.8
+    assert m["faithfulness"] == 1.0
+    assert m["citation_rate"] == 1.0

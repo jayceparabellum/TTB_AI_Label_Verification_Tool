@@ -11,7 +11,7 @@ import base64
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -47,6 +47,50 @@ def text_form(request: Request):
     return templates.TemplateResponse(
         request, "text.html",
         {"nav": "text", "official_warning": OFFICIAL_GOVERNMENT_WARNING},
+    )
+
+
+# --- Conversational agent (Layer 2, additive to the button UI) ----------------
+PROMPT_CHIPS = [
+    ("Verify the Clean Pass sample", "clean_pass"),
+    ("Verify the Wrong-ABV sample", "abv_mismatch"),
+    ("What does a wine label need?", ""),
+    ("Verify all the sample labels", ""),
+    ("Show only the flagged ones", ""),
+]
+
+
+@app.get("/chat", response_class=HTMLResponse)
+def chat_page(request: Request):
+    return templates.TemplateResponse(
+        request, "agent.html", {"nav": "chat", "chips": PROMPT_CHIPS},
+    )
+
+
+_SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+
+
+@app.post("/agent/chat")
+def agent_chat(message: str = Form(...), image_id: str = Form(""),
+               thread_id: str = Form(...)):
+    """Stream one agent turn as SSE. Pauses with a 'confirm' event before any
+    write; the client then calls /agent/resume with the same thread_id."""
+    from .agent_chat import stream_chat
+
+    return StreamingResponse(
+        stream_chat(message, image_id or None, thread_id),
+        media_type="text/event-stream", headers=_SSE_HEADERS,
+    )
+
+
+@app.post("/agent/resume")
+def agent_resume(thread_id: str = Form(...), decision: str = Form(...)):
+    """Resume a paused run after the human approved/cancelled the proposed write."""
+    from .agent_chat import resume_chat
+
+    return StreamingResponse(
+        resume_chat(thread_id, decision),
+        media_type="text/event-stream", headers=_SSE_HEADERS,
     )
 
 
