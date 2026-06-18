@@ -14,6 +14,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 COPY scripts ./scripts
+# Layer 2 (agent) + Layer 3 (RAG, incl. the committed corpus) ride along so the
+# /chat panel works on the deployed instance. Their deps are in requirements.txt
+# (langgraph, rank-bm25); the LLM (Ollama) and dense embeddings are absent on this
+# lean host, so chat degrades gracefully and RAG runs BM25-only — no crash.
+COPY agent ./agent
+COPY rag ./rag
 
 # Generate the bundled sample images at build time.
 RUN python scripts/generate_samples.py
