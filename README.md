@@ -79,6 +79,28 @@ The eval harness reports **two honest numbers** instead of one round figure:
   drops a character on the hardest reads. That is the documented trade-off,
   measured rather than hidden, not a logic error.
 
+Per-failure-mode breakdown on the degraded set (compliant label, so the true
+verdict for every field is PASS — a ✗ is an OCR misread, not a wrong decision):
+
+| Degraded photo (failure mode) | Brand | ABV | Warning | Verdict |
+|-------------------------------|:-----:|:---:|:-------:|---------|
+| 5° rotation                   |   ✓   |  ✓  |    ✗    | flag\*  |
+| 8° rotation (heavy)           |   ✓   |  ✓  |    ✓    | **pass** |
+| Gaussian blur                 |   ✓   |  ✓  |    ✗    | flag\*  |
+| JPEG compression (q30)        |   ✓   |  ✓  |    ✗    | flag\*  |
+| Low contrast                  |   ✓   |  ✓  |    ✓    | **pass** |
+| Perspective / keystone        |   ✓   |  ✓  |    ✓    | **pass** |
+| Glare / overexposure          |   ✓   |  ✓  |    ✓    | **pass** |
+| Shadow / uneven lighting      |   ✓   |  ✓  |    ✗    | flag\*  |
+| Sensor noise                  |   ✓   |  ✓  |    ✓    | **pass** |
+| Blur + rotation (compound)    |   ✓   |  ✓  |    ✓    | **pass** |
+
+**6/10 degraded photos fully pass; brand and ABV are read correctly on all 10.**
+The four `flag\*` rows are *warning-only* misses where OCR dropped a character in
+the long §16.21 text — the strict matcher then conservatively flags for human
+review rather than passing a possibly-wrong label. Regenerate this table anytime
+with `python eval/run_eval.py` (writes `eval/REPORT.md`).
+
 Latency stays far under the 5-second budget: **~80–270 ms server compute locally**,
 and **~550–750 ms on the live Render Starter instance** (~1 s round-trip including
 network).
