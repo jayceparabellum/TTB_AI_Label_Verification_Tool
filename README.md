@@ -74,10 +74,11 @@ The eval harness reports **two honest numbers** instead of one round figure:
   degraded photos* across 10 real-world failure modes (rotation, blur, JPEG,
   low/uneven lighting, perspective, glare, shadow, sensor noise, blur+rotate).
   An OpenCV deskew stage before OCR lifts this from 54% (**+15 pts**, ablation-tuned
-  in `eval/ablate.py`). All 3 clean cases pass and **brand and ABV pass on every
-  degraded case** — only the deliberately-strict warning check misses when OCR
-  drops a character on the hardest reads. That is the documented trade-off,
-  measured rather than hidden, not a logic error.
+  in `eval/ablate.py`). All 3 clean cases pass, **ABV reads correctly on every
+  degraded case**, and brand on all but one (a heavy shadow that occludes the
+  start of the name). The remaining misses are the deliberately-strict warning
+  check when OCR drops a character on the hardest reads — the documented
+  trade-off, measured rather than hidden, not a logic error.
 
 Per-failure-mode breakdown on the degraded set (compliant label, so the true
 verdict for every field is PASS — a ✗ is an OCR misread, not a wrong decision):
@@ -91,15 +92,24 @@ verdict for every field is PASS — a ✗ is an OCR misread, not a wrong decisio
 | Low contrast                  |   ✓   |  ✓  |    ✓    | **pass** |
 | Perspective / keystone        |   ✓   |  ✓  |    ✓    | **pass** |
 | Glare / overexposure          |   ✓   |  ✓  |    ✓    | **pass** |
-| Shadow / uneven lighting      |   ✓   |  ✓  |    ✗    | flag\*  |
+| Shadow / uneven lighting      |   ✗   |  ✓  |    ✗    | flag\*  |
 | Sensor noise                  |   ✓   |  ✓  |    ✓    | **pass** |
 | Blur + rotation (compound)    |   ✓   |  ✓  |    ✓    | **pass** |
 
-**6/10 degraded photos fully pass; brand and ABV are read correctly on all 10.**
-The four `flag\*` rows are *warning-only* misses where OCR dropped a character in
-the long §16.21 text — the strict matcher then conservatively flags for human
-review rather than passing a possibly-wrong label. Regenerate this table anytime
-with `python eval/run_eval.py` (writes `eval/REPORT.md`).
+**6/10 degraded photos fully pass; ABV reads correctly on all 10, brand on 9/10.**
+Three `flag\*` rows are *warning-only* misses where OCR dropped a character in the
+long §16.21 text; the heavy-shadow row also loses the start of the brand (OCR
+reads "ne's Throw"), which correctly FLAGs rather than passing on a partial read.
+In every case the strict matcher conservatively flags for human review rather than
+passing a possibly-wrong label. Regenerate this table anytime with
+`python eval/run_eval.py` (writes `eval/REPORT.md`).
+
+The eval also includes one **real bottle photo** (a Jack Daniel's Old No. 7, in
+`eval/images/real/`), graded separately against the true verdict from the photo so
+one hard anecdote doesn't move the synthetic benchmark: ABV reads `40%`, but the
+stylized brand misses and the result is routed to NEEDS REVIEW — the measured
+real-world gap (see *Trade-offs* below). Drop more photos into `eval/images/real/`
+with a `brand|abv|exp_brand,exp_alcohol,exp_warning` sidecar to extend it.
 
 Latency stays far under the 5-second budget: **~80–270 ms server compute locally**,
 and **~550–750 ms on the live Render Starter instance** (~1 s round-trip including
