@@ -216,3 +216,7 @@ textarea.mono { font-family: var(--mono); font-size: .98rem; }
 .chat-form { display: flex; gap: 8px; margin-top: 6px; }
 .chat-form input[type=text] { flex: 1; padding: 12px 14px; font-size: 1.05rem;
   border: 1px solid #cdd5e3; border-radius: 10px; }
+.msg-confirm { align-self: stretch; background: #eef6ff; border: 1px solid #b9d0ec;
+  color: #1e3a8a; }
+.confirm-actions { display: flex; gap: 8px; margin-top: 10px; }
+.confirm-actions button { padding: 8px 16px; }

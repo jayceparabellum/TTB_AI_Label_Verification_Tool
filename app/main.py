@@ -65,15 +65,30 @@ def chat_page(request: Request):
     )
 
 
+_SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+
+
 @app.post("/agent/chat")
-def agent_chat(message: str = Form(...), image_id: str = Form("")):
-    """Stream one agent turn as Server-Sent Events (visible tool steps + text)."""
+def agent_chat(message: str = Form(...), image_id: str = Form(""),
+               thread_id: str = Form(...)):
+    """Stream one agent turn as SSE. Pauses with a 'confirm' event before any
+    write; the client then calls /agent/resume with the same thread_id."""
     from .agent_chat import stream_chat
 
     return StreamingResponse(
-        stream_chat(message, image_id or None),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        stream_chat(message, image_id or None, thread_id),
+        media_type="text/event-stream", headers=_SSE_HEADERS,
+    )
+
+
+@app.post("/agent/resume")
+def agent_resume(thread_id: str = Form(...), decision: str = Form(...)):
+    """Resume a paused run after the human approved/cancelled the proposed write."""
+    from .agent_chat import resume_chat
+
+    return StreamingResponse(
+        resume_chat(thread_id, decision),
+        media_type="text/event-stream", headers=_SSE_HEADERS,
     )
 
 
