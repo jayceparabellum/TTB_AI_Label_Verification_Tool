@@ -61,7 +61,7 @@ and point the app at it — `app/ocr.py` auto-detects a Tesseract under
 ## Tests and evaluation
 
 ```bash
-pytest                    # 27 unit + end-to-end tests
+pytest                    # 69 unit + end-to-end tests
 python eval/run_eval.py   # accuracy + latency report -> eval/REPORT.md
 ```
 
@@ -70,11 +70,14 @@ The eval harness reports **two honest numbers** instead of one round figure:
 - **Logic-on-clean accuracy — 100%** (9/9 field decisions). The decision logic on
   correctly-read text; this is the deterministic core and the basis for the
   `<1%`-error target.
-- **End-to-end accuracy — 57%** (4/7 cases), full OCR + matching *including
-  degraded photos* (rotation, blur, JPEG noise, low contrast). All 3 clean cases
-  pass; on the 4 degraded cases, **brand and ABV still pass every time** — only
-  the deliberately-strict warning check misses when OCR drops a character. That is
-  the documented trade-off, measured rather than hidden, not a logic error.
+- **End-to-end accuracy — 69%** (9/13 cases), full OCR + matching *including
+  degraded photos* across 10 real-world failure modes (rotation, blur, JPEG,
+  low/uneven lighting, perspective, glare, shadow, sensor noise, blur+rotate).
+  An OpenCV deskew stage before OCR lifts this from 54% (**+15 pts**, ablation-tuned
+  in `eval/ablate.py`). All 3 clean cases pass and **brand and ABV pass on every
+  degraded case** — only the deliberately-strict warning check misses when OCR
+  drops a character on the hardest reads. That is the documented trade-off,
+  measured rather than hidden, not a logic error.
 
 Latency stays far under the 5-second budget: **~80–270 ms server compute locally**,
 and **~550–750 ms on the live Render Starter instance** (~1 s round-trip including

@@ -16,15 +16,15 @@ import numpy as np
 # Per-step toggles (eng-review D1). The master on/off (PREPROCESS_ENABLED) lives
 # in app/ocr.py.
 #
-# Tuned by the eval ablation (eval/REPORT.md): on the degraded set, each step
-# helps on its own but combining them is anti-synergistic — deskew fixes a heavy
-# rotation, CLAHE contrast fixes a lighter one, yet together they break both, and
-# the full pipeline gave NO lift over off. The best single step that doesn't
-# regress clean is CLAHE contrast (lift 50% -> 62%, same as deskew but with zero
-# geometric risk and it targets the universal low-light/glare problem). denoise
-# is the latency hog and didn't help; binarize is anti-synergistic. All four stay
-# togglable so a rotation-heavy deployment can flip deskew on and re-run the eval.
-STEPS = {"denoise": False, "contrast": True, "deskew": False, "binarize": False}
+# Tuned by the eval ablation (eval/ablate.py -> eval/REPORT.md). Re-run over a
+# broadened degraded set (now 10 cases: rotation, blur, JPEG, low/uneven light,
+# perspective, glare, shadow, sensor noise, blur+rotate), the winner is DESKEW
+# ALONE: end-to-end 53.8% -> 69.2% with clean held at 100% and ~211 ms/label.
+# The angle guard (below) leaves straight labels untouched, so the "geometric
+# risk" is bounded — no clean case regresses. Combining steps is anti-synergistic:
+# contrast+deskew drops back to 61.5%, and denoise only adds latency (no lift).
+# A non-rotated, low-light-heavy deployment can flip contrast on and re-ablate.
+STEPS = {"denoise": False, "contrast": False, "deskew": True, "binarize": False}
 
 # Don't rotate a near-straight label — only correct skew above this (degrees).
 DESKEW_MIN_ANGLE = 0.5

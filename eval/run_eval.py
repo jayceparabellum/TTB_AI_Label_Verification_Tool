@@ -16,6 +16,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+import cv2  # noqa: E402
+import numpy as np  # noqa: E402
 from PIL import Image, ImageEnhance, ImageFilter  # noqa: E402
 
 from app.verify import verify_label  # noqa: E402
@@ -29,6 +31,45 @@ def _ensure_samples() -> None:
         import scripts.generate_samples as g
 
         g.main()
+
+
+def _perspective(base: Image.Image) -> Image.Image:
+    """Keystone warp: simulate photographing the label from a low angle."""
+    a = cv2.cvtColor(np.asarray(base), cv2.COLOR_RGB2BGR)
+    h, w = a.shape[:2]
+    dx = w * 0.12
+    src = np.float32([[0, 0], [w, 0], [w, h], [0, h]])
+    dst = np.float32([[dx, 0], [w - dx, 0], [w, h], [0, h]])  # top edge pulled in
+    m = cv2.getPerspectiveTransform(src, dst)
+    out = cv2.warpPerspective(a, m, (w, h), borderValue=(255, 255, 255))
+    return Image.fromarray(cv2.cvtColor(out, cv2.COLOR_BGR2RGB))
+
+
+def _glare(base: Image.Image) -> Image.Image:
+    """Bright overexposed wash across the upper-left (camera flash / sunlight)."""
+    a = np.asarray(base).astype(np.float32)
+    h, w = a.shape[:2]
+    yy, xx = np.mgrid[0:h, 0:w]
+    # bright blob centered up-left, falling off with distance
+    d = np.sqrt((xx - w * 0.35) ** 2 + (yy - h * 0.3) ** 2)
+    glow = np.clip(1.0 - d / (0.6 * max(h, w)), 0, 1)[..., None] * 130
+    return Image.fromarray(np.clip(a + glow, 0, 255).astype(np.uint8))
+
+
+def _shadow(base: Image.Image) -> Image.Image:
+    """Uneven lighting: a left-to-right darkening gradient (one side in shadow)."""
+    a = np.asarray(base).astype(np.float32)
+    w = a.shape[1]
+    ramp = np.linspace(0.45, 1.0, w)[None, :, None]  # 0.45x on the left edge
+    return Image.fromarray(np.clip(a * ramp, 0, 255).astype(np.uint8))
+
+
+def _noise(base: Image.Image) -> Image.Image:
+    """Additive Gaussian sensor grain (deterministic seed for a stable eval)."""
+    a = np.asarray(base).astype(np.float32)
+    rng = np.random.default_rng(1234)
+    noisy = a + rng.normal(0, 18, a.shape)
+    return Image.fromarray(np.clip(noisy, 0, 255).astype(np.uint8))
 
 
 def _make_degraded() -> list[EvalCase]:
@@ -53,6 +94,17 @@ def _make_degraded() -> list[EvalCase]:
             continue
         elif mode == "lowcontrast":
             img = ImageEnhance.Contrast(base).enhance(0.45)
+        elif mode == "perspective":
+            img = _perspective(base)
+        elif mode == "glare":
+            img = _glare(base)
+        elif mode == "shadow":
+            img = _shadow(base)
+        elif mode == "noise":
+            img = _noise(base)
+        elif mode == "blur_rotate":
+            img = base.filter(ImageFilter.GaussianBlur(1.0)).rotate(
+                6, expand=True, fillcolor="white")
         out = IMAGES / f"{name}.png"
         img.save(out)
         cases.append(EvalCase(name, str(out.relative_to(ROOT)),
