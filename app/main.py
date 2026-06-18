@@ -7,6 +7,7 @@ agent. Stateless: nothing is persisted; each request is processed and discarded.
 
 from __future__ import annotations
 
+import base64
 import logging
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from . import batch as batch_mod
 from . import ocr
 from .models import VerificationResult
 from .reference import OFFICIAL_GOVERNMENT_WARNING
@@ -183,6 +185,35 @@ def reverify(
     return _render_result(
         request, result, brand, alcohol_content,
         image_src=image_src or None, ocr_text=ocr_text, expected_warning=warning,
+    )
+
+
+@app.get("/batch", response_class=HTMLResponse)
+def batch_form(request: Request):
+    return templates.TemplateResponse(
+        request, "batch.html", {"cap": batch_mod.BATCH_MAX_LABELS}
+    )
+
+
+@app.post("/batch", response_class=HTMLResponse)
+async def batch_run(
+    request: Request,
+    images: list[UploadFile] = File(...),
+    mapping: UploadFile = File(...),
+):
+    """Verify a batch of labels against a CSV of claimed data (stateless)."""
+    uploaded = [((img.filename or ""), await img.read()) for img in images]
+    result = batch_mod.run_batch(uploaded, await mapping.read())
+    results_csv_b64 = ""
+    if result.rows:
+        results_csv_b64 = base64.b64encode(
+            batch_mod.results_to_csv(result).encode()
+        ).decode()
+    return templates.TemplateResponse(
+        request,
+        "batch_results.html",
+        {"result": result, "results_csv_b64": results_csv_b64,
+         "cap": batch_mod.BATCH_MAX_LABELS},
     )
 
 
