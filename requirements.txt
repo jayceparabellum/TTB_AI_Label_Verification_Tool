@@ -15,6 +15,9 @@ langchain-core==1.4.7
 langchain-ollama==1.1.0
 # --- Layer 3: local RAG knowledge layer (Phase C) ---
 rank-bm25==0.2.2
-# Dense embeddings (BGE-small via sentence-transformers + chromadb) are host-deferred:
-# retrieval is BM25-only and fully offline until the host is provisioned. Enable with:
-#   sentence-transformers, chromadb   (see rag/retrieve.py DenseBackend)
+# Dense retrieval (BGE-small, fused with BM25 via RRF) is implemented in rag/dense.py
+# but its embedding dep is optional to keep the base image lean. Retrieval is
+# BM25-only until you install it, then dense turns on automatically (RAG_DENSE=auto):
+#   pip install sentence-transformers
+# The vector store is in-memory numpy (exact cosine at this corpus size); the model
+# downloads once and then runs fully offline.

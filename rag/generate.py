@@ -31,14 +31,24 @@ def _expand(text: str) -> str:
     return text + (" " + " ".join(extra) if extra else "")
 
 
+def _dense_supports(top) -> bool:
+    """A strong cosine hit can support an answer when lexical coverage is thin —
+    this is what lets the dense backend recover a genuine semantic match. No-op when
+    dense is off (dense_sim is None), so the BM25-only contract is unchanged."""
+    return getattr(top, "dense_sim", None) is not None and top.dense_sim >= config.RAG_DENSE_MIN_SIM
+
+
 def _supported(top) -> bool:
     """Refuse a single incidental word-overlap: with a multi-term query we need at
-    least two matched content terms, and coverage must clear the threshold."""
-    if top is None or top.matched == 0:
+    least two matched content terms, and coverage must clear the threshold. A strong
+    dense (cosine) match is an alternative path to support."""
+    if top is None:
         return False
+    if top.matched == 0:
+        return _dense_supports(top)
     if top.n_query_terms >= 3 and top.matched < 2:
-        return False
-    return top.coverage >= config.RAG_MIN_CONFIDENCE
+        return _dense_supports(top)
+    return top.coverage >= config.RAG_MIN_CONFIDENCE or _dense_supports(top)
 
 
 def _cite(r: Result) -> dict:

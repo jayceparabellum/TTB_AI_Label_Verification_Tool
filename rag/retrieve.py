@@ -50,24 +50,31 @@ def _content(text: str) -> set[str]:
     return {_fold(t) for t in _raw_tokens(text) if t not in _STOP and len(t) > 1}
 
 
-# --- Dense backend seam (host-deferred) --------------------------------------
+# --- Dense backend seam -------------------------------------------------------
 class DenseBackend:
-    """Interface for an optional dense retriever (BGE-small embeddings + Chroma).
-    Enabled when the host is provisioned; see rag/store.py. Until then unused."""
+    """Interface a dense retriever satisfies: an `available` flag and
+    `search(query, k) -> [(chunk_index, cosine), ...]`. The concrete BGE-small +
+    cosine-index implementation lives in rag/dense.py (DenseIndex); it duck-types
+    this contract, so importing it here would only add a cycle. Off by default;
+    enabled via config.RAG_DENSE when sentence-transformers is installed."""
 
     available = False
 
-    def search(self, query: str, k: int):  # pragma: no cover - not wired yet
+    def search(self, query: str, k: int):  # pragma: no cover - base stub
         raise NotImplementedError
 
 
 @dataclass
 class Result:
     chunk: Chunk
-    score: float          # BM25 rank score
-    coverage: float       # fraction of query content-terms present in the chunk
-    matched: int          # count of query content-terms present in the chunk
-    n_query_terms: int    # total query content-terms (for the refuse rule)
+    score: float                  # BM25 rank score
+    coverage: float               # fraction of query content-terms present in the chunk
+    matched: int                  # count of query content-terms present in the chunk
+    n_query_terms: int            # total query content-terms (for the refuse rule)
+    dense_sim: float | None = None  # cosine similarity when the dense backend is on
+
+
+_RRF_C = 60  # reciprocal-rank-fusion constant (standard); dampens top-rank dominance
 
 
 class Retriever:
@@ -78,27 +85,48 @@ class Retriever:
         # normalization penalizing the longest, most comprehensive sections.
         self._bm25 = BM25Okapi(
             [_tokens(c.text + " " + (c.heading + " ") * 3) for c in self.chunks])
-        self.dense = dense if (dense and dense.available) else None
+        self.dense = dense if (dense and getattr(dense, "available", False)) else None
 
-    def retrieve(self, query: str, k: int = 4) -> list[Result]:
-        scores = self._bm25.get_scores(_tokens(query))
-        q_terms = _content(query)
+    def _lexical_order(self, matched_by_i: list[int], scores) -> list[int]:
         # Rank by distinct query-term coverage first, BM25 as the tiebreak. For
         # short regulatory queries the count of distinct terms matched is a stronger
         # relevance signal than raw BM25, which can rank a chunk matching ONE common
         # term (e.g. "wine") above the controlling section matching BOTH terms but
         # penalized for length. BM25 still orders chunks with equal coverage.
+        return sorted(range(len(self.chunks)),
+                      key=lambda i: (matched_by_i[i], scores[i]), reverse=True)
+
+    def retrieve(self, query: str, k: int = 4) -> list[Result]:
+        scores = self._bm25.get_scores(_tokens(query))
+        q_terms = _content(query)
+        n = len(self.chunks)
         matched_by_i = [
             len(q_terms & _content(c.text + " " + c.heading)) for c in self.chunks]
-        ranked = sorted(range(len(self.chunks)),
-                        key=lambda i: (matched_by_i[i], scores[i]), reverse=True)[:k]
+        lex_order = self._lexical_order(matched_by_i, scores)
+
+        dense_sims: dict[int, float] = {}
+        if self.dense is not None:
+            # Fuse lexical + dense rankings with RRF: a chunk ranked high by EITHER
+            # retriever floats up, so dense recovers semantic matches BM25 misses
+            # without overturning strong lexical hits. Lexical coverage still gates
+            # cite-vs-refuse downstream, so fusion reorders but never invents support.
+            dense_sims = dict(self.dense.search(query, k=n))
+            dense_order = sorted(range(n), key=lambda i: dense_sims.get(i, 0.0), reverse=True)
+            lex_rank = {idx: r for r, idx in enumerate(lex_order)}
+            den_rank = {idx: r for r, idx in enumerate(dense_order)}
+            fused = {i: 1.0 / (_RRF_C + lex_rank[i]) + 1.0 / (_RRF_C + den_rank[i])
+                     for i in range(n)}
+            ranked = sorted(range(n), key=lambda i: fused[i], reverse=True)[:k]
+        else:
+            ranked = lex_order[:k]
+
         out = []
         for i in ranked:
             matched = matched_by_i[i]
             cov = (matched / len(q_terms)) if q_terms else 0.0
             out.append(Result(chunk=self.chunks[i], score=float(scores[i]), coverage=cov,
-                              matched=matched, n_query_terms=len(q_terms)))
-        # NOTE: when self.dense is enabled, fuse dense ranks here (RRF) before return.
+                              matched=matched, n_query_terms=len(q_terms),
+                              dense_sim=dense_sims.get(i)))
         return out
 
 
@@ -109,5 +137,8 @@ _RETRIEVER: Retriever | None = None
 def get_retriever() -> Retriever:
     global _RETRIEVER
     if _RETRIEVER is None:
-        _RETRIEVER = Retriever()
+        # Build one chunk list and share it with both backends so indices align.
+        from .dense import build_dense_backend
+        chunks = load_corpus()
+        _RETRIEVER = Retriever(chunks=chunks, dense=build_dense_backend(chunks))
     return _RETRIEVER

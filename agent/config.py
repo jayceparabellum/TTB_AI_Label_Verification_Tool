@@ -37,6 +37,16 @@ RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "5"))
 # Below this fused-retrieval score, regulatory tools REFUSE rather than answer.
 RAG_MIN_CONFIDENCE = float(os.environ.get("RAG_MIN_CONFIDENCE", "0.30"))
 
+# --- Dense retrieval (BGE-small, fused with BM25) -----------------------------
+# "auto" = use dense when sentence-transformers + the model are importable, else
+# fall back to BM25-only; "off" forces BM25-only; "on" requires dense (raises if
+# the dependency is missing). Default "auto" keeps the base install fully offline.
+RAG_DENSE = os.environ.get("RAG_DENSE", "auto").lower()
+# A dense (cosine) hit at or above this similarity can support an answer even when
+# lexical term-coverage is thin — lets a genuine semantic match through without
+# weakening the refuse gate for unrelated queries.
+RAG_DENSE_MIN_SIM = float(os.environ.get("RAG_DENSE_MIN_SIM", "0.55"))
+
 # --- Offline guard ------------------------------------------------------------
 # When set, code paths that would reach the public internet must refuse. The
 # corpus is fetched at build time and cached; runtime is fully local.
