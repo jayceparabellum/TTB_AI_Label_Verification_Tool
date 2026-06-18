@@ -162,9 +162,21 @@ throttled for OCR — see the latency note below). Health check at `/health`.
 - **Strict warning matching is deliberately unforgiving.** It will FLAG a compliant
   label if OCR badly mangles the warning text. This is faithful to the requirement
   that the warning be exact, at the cost of some false flags on low-quality photos.
-- **Single label at a time.** Batch upload, image-quality correction, a
-  "needs human review" confidence state, COLA integration, and auth are all
-  deliberately out of scope for this POC (candidate next steps).
+- **Real-world bottle photos often read poorly — and the app says so rather than
+  guessing.** A glare-lit phone photo (small label in a busy frame, curved glass)
+  can OCR to near-garbage. Two safeguards keep that honest: (1) when OCR confidence
+  is low the verdict is **NEEDS REVIEW — low confidence read**, not a confident
+  PASS/FAIL; (2) each field only reports a match it actually earned — the fuzzy
+  brand matcher requires a genuine similarity score, so garbled text scores low and
+  FLAGs instead of falsely passing. (A real Jack Daniel's bottle photo, for example,
+  reads at ~37% confidence: ABV `40%` matches, but the brand and warning correctly
+  FLAG and the whole result is sent to human review.) The bundled samples and most
+  of the eval set are clean/degraded *flat* labels — expect more NEEDS-REVIEW
+  outcomes on real bottle photography.
+- **Out of scope for this POC.** COLA / government-system integration and
+  authentication are deliberately not built (candidate next steps). Batch
+  verification and the low-confidence "needs review" state — originally deferred —
+  are now implemented.
 - **OCR is CPU-bound, so the host's CPU sets the latency.** On a normal CPU the
   full verify is ~200 ms (well under the 5 s budget). Tesseract is tuned for
   constrained hosts (`--psm 6`, single OpenMP thread). Note that a heavily
