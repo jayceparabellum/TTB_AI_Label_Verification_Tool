@@ -107,11 +107,12 @@ compliant label as non-compliant. An OpenCV deskew stage lifts confident-correct
 verdicts from 9/13 to 11/13 (ablation-tuned in `eval/ablate.py`).
 
 The set includes three **real bottle photos** (in `eval/images/real/`): a Jack
-Daniel's Old No. 7 (ABV reads `40%`, but the stylized brand can't be read), a Cîroc
-vodka, and a Grey Goose vodka (both frosted-glass labels with thin reflective text
-that OCR poorly). All three correctly **route to human review** rather than
-guessing — the measured real-world gap, surfaced as *coverage*, not hidden in the
-error rate. Drop more photos into `eval/images/real/` with a
+Daniel's Old No. 7 (at higher resolution OCR reads the brand *and* `40%` ABV
+correctly, but overall confidence stays under the commit threshold), and a Cîroc
+and a Grey Goose vodka (frosted-glass labels with thin reflective text that OCR
+poorly). All three correctly **route to human review** rather than guessing — the
+measured real-world gap, surfaced as *coverage*, not hidden in the error rate.
+Drop more photos into `eval/images/real/` with a
 `brand|abv|exp_brand,exp_alcohol,exp_warning` sidecar to extend the set.
 
 Latency stays far under the 5-second budget: **~80–430 ms server compute locally**,
@@ -187,11 +188,11 @@ throttled for OCR — see the latency note below). Health check at `/health`.
   is low the verdict is **NEEDS REVIEW — low confidence read**, not a confident
   PASS/FAIL; (2) each field only reports a match it actually earned — the fuzzy
   brand matcher requires a genuine similarity score, so garbled text scores low and
-  FLAGs instead of falsely passing. (A real Jack Daniel's bottle photo, for example,
-  reads at ~37% confidence: ABV `40%` matches, but the stylized brand can't be read,
-  so the whole result defers to NEEDS REVIEW rather than guessing.) The bundled
-  samples and most of the eval set are clean/degraded *flat* labels — expect more
-  NEEDS-REVIEW outcomes on real bottle photography.
+  FLAGs instead of falsely passing. (A real Cîroc or Grey Goose bottle photo, for
+  example, reads at ~30–40% confidence on its thin reflective label, so the whole
+  result defers to NEEDS REVIEW rather than guessing.) The bundled samples and most
+  of the eval set are clean/degraded *flat* labels — expect more NEEDS-REVIEW
+  outcomes on real bottle photography.
 - **Out of scope for this POC.** COLA / government-system integration and
   authentication are deliberately not built (candidate next steps). Batch
   verification and the low-confidence "needs review" state — originally deferred —
