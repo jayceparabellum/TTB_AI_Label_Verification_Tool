@@ -61,7 +61,7 @@ and point the app at it — `app/ocr.py` auto-detects a Tesseract under
 ## Tests and evaluation
 
 ```bash
-pytest                    # 141 unit + end-to-end tests
+pytest                    # 142 unit + end-to-end tests
 python eval/run_eval.py   # goal metrics + latency report -> eval/REPORT.md
 ```
 
@@ -170,10 +170,12 @@ every change.
   Every write is recorded to an **append-only audit log** (who/what/when/why).
 - **Citation-grounded RAG, cite-or-refuse.** Hybrid retrieval (BM25 now; dense
   BGE-small/Chroma host-deferred) over a committed, citation-tagged 27 CFR corpus
-  (Part 16 + Part 4 wine). `regulatory_lookup` and `explain_flag` answer **only** from
-  retrieved chunks, always cite the controlling section, and **refuse** ("not found in
-  the regulations on file") when unsupported — never reciting regulation from memory.
-  RAG eval: hit-rate 100%, faithfulness 100%, citation 100% (`eval/run_rag_eval.py`).
+  spanning the health warning (Part 16) and per-commodity labeling for wine (Part 4),
+  distilled spirits (Part 5), and malt beverages (Part 7). `regulatory_lookup` and
+  `explain_flag` answer **only** from retrieved chunks, always cite the controlling
+  section, and **refuse** ("not found in the regulations on file") when unsupported —
+  never reciting regulation from memory. RAG eval: hit-rate 100%, faithfulness 100%,
+  citation 100% across 14 golden cases (`eval/run_rag_eval.py`).
 - **Fully offline.** No outbound calls at runtime (local Tesseract, local BM25, local
   Ollama) — proven by `tests/test_offline.py`, which blocks outbound sockets and runs
   the verify + RAG paths.
@@ -270,9 +272,11 @@ Everything stays local — no outbound calls at request time.
   `DenseBackend` seam in `rag/retrieve.py`); BM25 is strong for term-heavy
   regulatory queries, dense would add synonym recall.
 - **RAG corpus is a curated excerpt, not the full live eCFR.** The committed corpus
-  is 27 CFR Part 16 + a Part 4 (wine) slice, citation-accurate and offline; §16.21 is
-  verbatim. The full live ingest of Parts 4/5/7/16 + the TTB Beverage Alcohol Manual
-  is the deferred build-time step. Every chunk carries a `source_url` to verify
+  is 27 CFR Part 16 + labeling slices of Parts 4 (wine), 5 (distilled spirits), and 7
+  (malt beverages), citation-accurate and offline; §16.21 is verbatim. The post-2020
+  modernized Part 5/7 section numbers in particular should be confirmed against eCFR
+  before operational use. The full live ingest of Parts 4/5/7/16 + the TTB Beverage
+  Alcohol Manual is the deferred build-time step. Every chunk carries a `source_url` to verify
   against eCFR.
 - **Out of scope for this POC.** COLA / government-system integration and
   authentication are deliberately not built (candidate next steps). Batch

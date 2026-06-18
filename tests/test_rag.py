@@ -8,9 +8,13 @@ from rag.retrieve import Retriever
 
 def test_ingest_carries_citation_metadata():
     chunks = load_corpus()
-    assert len(chunks) >= 6
+    assert len(chunks) >= 12
     by_section = {c.section: c for c in chunks}
     assert "16.21" in by_section and "16.22" in by_section and "4.32" in by_section
+    # Parts 5 (distilled spirits) and 7 (malt beverages) are in the corpus.
+    assert "5.63" in by_section and "5.65" in by_section and "7.63" in by_section
+    assert by_section["5.65"].beverage_type == "spirits"
+    assert by_section["7.63"].beverage_type == "malt"
     # §16.21 is the verbatim official statement.
     assert by_section["16.21"].text.startswith("GOVERNMENT WARNING:")
     for c in chunks:
@@ -36,8 +40,20 @@ def test_answer_in_corpus_is_cited():
         assert by_section[s].text in res["answer"]
 
 
+def test_answer_covers_spirits_and_malt():
+    # Distilled-spirits proof labeling (Part 5) and malt-beverage labeling (Part 7)
+    # are now in-corpus and cited.
+    spirits = generate.answer("what is the proof requirement for vodka", "spirits")
+    assert spirits["status"] == "answered"
+    assert "5.65" in {c["section"] for c in spirits["citations"]}
+    malt = generate.answer("what does a malt beverage label need?", "malt")
+    assert malt["status"] == "answered"
+    assert "7.63" in {c["section"] for c in malt["citations"]}
+
+
 def test_answer_refuses_out_of_corpus():
-    for q in ("what is the proof requirement for vodka?", "how do I bake bread?"):
+    # Genuinely out-of-corpus: labeling corpus has no excise-tax or baking content.
+    for q in ("what is the federal excise tax rate", "how do I bake bread?"):
         res = generate.answer(q)
         assert res["status"] == "refused"
         assert res["answer"] == generate.REFUSAL and res["citations"] == []

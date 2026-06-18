@@ -74,7 +74,7 @@ def test_rag_tools_are_grounded_cite_or_refuse():
     rl = T.regulatory_lookup.invoke({"question": "what does a wine label need?",
                                      "beverage_type": "wine"})
     assert rl["status"] == "answered" and rl["citations"]
-    refused = T.regulatory_lookup.invoke({"question": "vodka proof requirement"})
+    refused = T.regulatory_lookup.invoke({"question": "how do I bake sourdough bread"})
     assert refused["status"] == "refused" and refused["citations"] == []
     ef = T.explain_flag.invoke({"field": "government_warning",
                                 "failure_reason": "header is Title case not ALL CAPS"})

@@ -43,6 +43,6 @@ def test_verification_runs_fully_offline(no_outbound):
 def test_rag_runs_fully_offline(no_outbound):
     answered = generate.answer("what does a wine label need?", "wine")
     assert answered["status"] == "answered" and answered["citations"]
-    assert generate.answer("vodka proof requirement")["status"] == "refused"
+    assert generate.answer("how do I bake sourdough bread")["status"] == "refused"
     flag = generate.explain_flag("government_warning", "Title case not ALL CAPS")
     assert flag["citations"][0]["section"] == "16.22"

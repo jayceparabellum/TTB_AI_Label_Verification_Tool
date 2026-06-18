@@ -1,13 +1,23 @@
 {
-  "_about": "Golden Q&A set for the RAG layer. 'section' is the controlling citation expected among the answer's citations; null means the query is out-of-corpus and the system MUST refuse.",
+  "_about": "Golden Q&A set for the RAG layer. 'section' is the controlling citation expected among the answer's citations; null means the query is out-of-corpus and the system MUST refuse. Covers the warning (Part 16) and the per-commodity labeling rules: wine (4), distilled spirits (5), malt beverages (7).",
   "cases": [
     {"q": "what does a wine label need?", "section": "4.32", "bt": "wine"},
     {"q": "alcohol content statement for wine", "section": "4.36", "bt": "wine"},
     {"q": "class and type designation for wine", "section": "4.34", "bt": "wine"},
     {"q": "appellation of origin on a wine label", "section": "4.25", "bt": "wine"},
+
+    {"q": "what does a distilled spirits label need?", "section": "5.63", "bt": "spirits"},
+    {"q": "alcohol content and proof for distilled spirits", "section": "5.65", "bt": "spirits"},
+    {"q": "what is the proof requirement for vodka", "section": "5.65", "bt": "spirits"},
+    {"q": "age statement for whisky", "section": "5.66", "bt": "spirits"},
+
+    {"q": "what does a malt beverage label need?", "section": "7.63", "bt": "malt"},
+    {"q": "alcohol content for malt beverages", "section": "7.65", "bt": "malt"},
+
     {"q": "government warning capital letters bold format", "section": "16.22", "bt": null},
     {"q": "who must put the health warning on the container", "section": "16.20", "bt": null},
-    {"q": "what is the proof requirement for vodka", "section": null, "bt": null},
+
+    {"q": "what is the federal excise tax rate", "section": null, "bt": null},
     {"q": "how do I bake sourdough bread", "section": null, "bt": null}
   ]
 }
