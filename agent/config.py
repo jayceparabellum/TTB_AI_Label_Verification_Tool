@@ -18,13 +18,28 @@ def _path(env: str, default: Path) -> Path:
     return Path(os.environ.get(env, str(default)))
 
 
+# --- LLM backend --------------------------------------------------------------
+# Which chat model the agent uses. Default "ollama" = a LOCAL model, fully offline
+# (the original invariant). Set LLM_BACKEND=anthropic on a deployed host that has
+# no local model (e.g. Render) to use Claude via the cloud API — this is an
+# explicit, opt-in relaxation of "fully offline" for that deploy only; local and
+# air-gapped runs leave it unset and stay offline.
+LLM_BACKEND = os.environ.get("LLM_BACKEND", "ollama").lower()
+LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE",
+                                       os.environ.get("OLLAMA_TEMPERATURE", "0.0")))
+
 # --- Local model (Ollama) -----------------------------------------------------
 # Small 3B model by default (locked decision Q1); swap via OLLAMA_MODEL after the
 # host spike picks the winner between llama3.2:3b and qwen2.5:3b-instruct.
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2:3b")
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-# Keep token generation snappy for a chat panel; verification never waits on this.
-OLLAMA_TEMPERATURE = float(os.environ.get("OLLAMA_TEMPERATURE", "0.0"))
+OLLAMA_TEMPERATURE = LLM_TEMPERATURE
+
+# --- Cloud model (Anthropic Claude) -------------------------------------------
+# Used only when LLM_BACKEND=anthropic. The key is read from ANTHROPIC_API_KEY by
+# the client (set it as a host secret; never commit it). A fast tool-calling model
+# by default; override with ANTHROPIC_MODEL.
+ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
 
 # --- Persistence (local SQLite) ----------------------------------------------
 CHECKPOINT_DB = _path("AGENT_CHECKPOINT_DB", _DATA / "checkpoints.sqlite")

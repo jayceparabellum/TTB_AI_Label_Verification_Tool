@@ -9,6 +9,7 @@ gate's interrupt/resume work across stateless HTTP requests; the thread_id keys 
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
@@ -19,6 +20,8 @@ from agent import config
 from agent.graph import build_graph
 from agent.images import STORE
 from agent.llm import make_llm
+
+_log = logging.getLogger("ttb.agent_chat")
 
 # Seed bundled samples so prompt chips / the demo can verify without an upload.
 STORE.seed_samples()
@@ -79,6 +82,10 @@ def _run(graph_input, thread_id: str):
             yield from _events(update)
         yield _sse({"type": "done"})
     except Exception:  # noqa: BLE001 — model/connection failures degrade gracefully
+        # Log the real cause (e.g. Ollama unreachable, bad API key, model error) so
+        # it's diagnosable in host logs instead of silently masked as "offline".
+        _log.exception("agent run failed (backend=%s); degrading to offline message",
+                       config.LLM_BACKEND)
         yield _sse({"type": "error", "text": _OFFLINE_MSG})
         yield _sse({"type": "done"})
 

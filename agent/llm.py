@@ -1,8 +1,10 @@
-"""Local model factory (Ollama) + the system prompt that encodes the invariants.
+"""Model factory + the system prompt that encodes the invariants.
 
-The factory is swappable so tests inject a stub (no running Ollama needed) and the
-deployed app uses the real local model. The system prompt is the behavioral
-guardrail: orchestrate, never adjudicate.
+The factory is swappable so tests inject a stub (no running model needed). It
+builds either a LOCAL Ollama model (default, fully offline) or cloud Claude via
+Anthropic when LLM_BACKEND=anthropic — the deployed-host path, since a lean cloud
+host has no local model. The system prompt is the behavioral guardrail:
+orchestrate, never adjudicate; the backend choice does not change that contract.
 """
 
 from __future__ import annotations
@@ -27,14 +29,28 @@ SYSTEM_PROMPT = (
 )
 
 
-def make_llm(tools=ALL_TOOLS):
-    """Build a tool-bound ChatOllama from config. Imported lazily-friendly: the
-    model connection is not opened until the model is actually invoked."""
+def _build_model():
+    """Construct the chat model for the configured backend. Connections are lazy
+    (not opened until the model is invoked), so this is import-safe."""
+    if config.LLM_BACKEND == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+        # Reads ANTHROPIC_API_KEY from the environment (a host secret).
+        return ChatAnthropic(
+            model=config.ANTHROPIC_MODEL,
+            temperature=config.LLM_TEMPERATURE,
+            timeout=30,
+            max_retries=1,
+        )
     from langchain_ollama import ChatOllama
-
-    llm = ChatOllama(
+    return ChatOllama(
         model=config.OLLAMA_MODEL,
         base_url=config.OLLAMA_BASE_URL,
         temperature=config.OLLAMA_TEMPERATURE,
     )
+
+
+def make_llm(tools=ALL_TOOLS):
+    """Build a tool-bound chat model from config (Ollama by default, Claude when
+    LLM_BACKEND=anthropic). The same tool-calling contract holds for both."""
+    llm = _build_model()
     return llm.bind_tools(tools) if tools else llm

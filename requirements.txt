@@ -13,6 +13,9 @@ langgraph==1.2.5
 langgraph-checkpoint-sqlite==3.1.0
 langchain-core==1.4.7
 langchain-ollama==1.1.0
+# Cloud chat backend for deployed hosts with no local model (LLM_BACKEND=anthropic);
+# local/air-gapped runs default to Ollama and don't need this at runtime.
+langchain-anthropic==1.4.6
 # --- Layer 3: local RAG knowledge layer (Phase C) ---
 rank-bm25==0.2.2
 # Dense retrieval (BGE-small, fused with BM25 via RRF) is implemented in rag/dense.py
