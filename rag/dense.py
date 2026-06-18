@@ -50,13 +50,28 @@ class BGEEmbedder:
             # Honor the offline invariant: at run time load ONLY from the local
             # cache, never letting huggingface_hub phone home to check for updates.
             # The model is provisioned earlier (build step / first run with network);
-            # see the Dockerfile.agent note. A cache miss here fails loudly rather
-            # than silently reaching the network.
+            # see the Dockerfile.agent note.
+            #   - local_files_only is the precise, version-supported control.
+            #   - HF_HUB_OFFLINE/TRANSFORMERS_OFFLINE are defense-in-depth: a silent
+            #     network call from a locked-down federal host is the failure we will
+            #     not risk, so we belt-and-suspenders it.
+            from sentence_transformers import SentenceTransformer
             if config.OFFLINE:
                 os.environ.setdefault("HF_HUB_OFFLINE", "1")
                 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
-            from sentence_transformers import SentenceTransformer
-            self._model = SentenceTransformer(self.model_name)
+            try:
+                self._model = SentenceTransformer(
+                    self.model_name, local_files_only=config.OFFLINE)
+            except Exception as exc:
+                if config.OFFLINE:
+                    raise RuntimeError(
+                        f"Dense model {self.model_name!r} is not in the local cache and "
+                        f"OFFLINE is set, so it cannot be downloaded at run time. "
+                        f"Provision it first (with network): python -c \"from "
+                        f"sentence_transformers import SentenceTransformer as S; "
+                        f"S('{self.model_name}')\" — or set RAG_DENSE=off to use "
+                        f"BM25-only.") from exc
+                raise
         return self._model
 
     def encode(self, texts: Sequence[str]) -> np.ndarray:

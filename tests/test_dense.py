@@ -13,7 +13,7 @@ from agent import config
 from rag import generate
 from rag.dense import BGEEmbedder, DenseIndex, build_dense_backend
 from rag.ingest import load_corpus
-from rag.retrieve import Retriever
+from rag.retrieve import Retriever, get_retriever
 
 
 class StubEmbedder:
@@ -98,3 +98,42 @@ def test_generate_with_dense_cites_and_refuses(monkeypatch, chunks):
 
     refused = generate.answer("how do I bake sourdough bread")
     assert refused["status"] == "refused" and refused["citations"] == []
+
+
+# --- Defect B: the shared retriever is deterministic (hermetic conftest) ------
+def test_shared_retriever_is_bm25_only_in_suite():
+    # conftest pins RAG_DENSE=off so the suite runs the same regime as CI/Render,
+    # regardless of whether sentence-transformers is installed on this box.
+    assert get_retriever().dense is None
+
+
+# --- Defect A: offline model load is local-only, with a clear cache-miss error
+def test_embedder_loads_local_only_when_offline(monkeypatch):
+    st = pytest.importorskip("sentence_transformers")
+    captured = {}
+
+    class FakeST:
+        def __init__(self, name, **kw):
+            captured["name"] = name
+            captured.update(kw)
+
+        def encode(self, texts, **kw):
+            return np.ones((len(texts), 4), dtype=np.float32)
+
+    monkeypatch.setattr(st, "SentenceTransformer", FakeST)
+    monkeypatch.setattr(config, "OFFLINE", True)
+    BGEEmbedder("some/model").encode(["hello"])
+    assert captured.get("local_files_only") is True       # never phones home at runtime
+
+
+def test_embedder_clear_error_on_offline_cache_miss(monkeypatch):
+    st = pytest.importorskip("sentence_transformers")
+
+    class Boom:
+        def __init__(self, *a, **k):
+            raise OSError("model not found in local cache")
+
+    monkeypatch.setattr(st, "SentenceTransformer", Boom)
+    monkeypatch.setattr(config, "OFFLINE", True)
+    with pytest.raises(RuntimeError, match="[Pp]rovision"):
+        BGEEmbedder("some/model").encode(["hello"])
