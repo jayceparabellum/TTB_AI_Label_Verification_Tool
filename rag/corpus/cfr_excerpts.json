@@ -1,0 +1,55 @@
+{
+  "_about": "Curated, citation-tagged excerpts of the actual 27 CFR sections used by the RAG layer (Layer 3). Each chunk is one citable unit; metadata IS the citation. §16.21 is verbatim (the official statement); the others are faithful, conservative statements of the cited section's requirement. This committed corpus keeps the prototype fully OFFLINE and reproducible; the full live eCFR ingest (all of Parts 4/5/7/16 + BAM) is the deferred build-time step. Verify any chunk against the source_url.",
+  "_retrieved": "2026-06-18 (representative effective dates; confirm against eCFR before operational use)",
+  "chunks": [
+    {
+      "part": "16", "section": "16.20", "paragraph": "(a)",
+      "beverage_type": "all", "effective_date": "2020-01-01",
+      "source_url": "https://www.ecfr.gov/current/title-27/section-16.20",
+      "heading": "Health warning statement requirement",
+      "text": "Any person who manufactures, imports, or bottles alcoholic beverages for sale or distribution in the United States must ensure that the container bears the Government health warning statement set out in 27 CFR 16.21. The requirement applies to all alcoholic beverages, including wine, distilled spirits, and malt beverages."
+    },
+    {
+      "part": "16", "section": "16.21", "paragraph": "",
+      "beverage_type": "all", "effective_date": "2020-01-01",
+      "source_url": "https://www.ecfr.gov/current/title-27/section-16.21",
+      "heading": "The Government Warning statement (verbatim)",
+      "text": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+    },
+    {
+      "part": "16", "section": "16.22", "paragraph": "(a)",
+      "beverage_type": "all", "effective_date": "2020-01-01",
+      "source_url": "https://www.ecfr.gov/current/title-27/section-16.22",
+      "heading": "Legibility and format of the warning",
+      "text": "The health warning statement must be readily legible, appear on a contrasting background, and be separate and apart from other information. The words 'GOVERNMENT WARNING' must appear in capital letters and in bold type. The remainder of the statement may not appear in bold."
+    },
+    {
+      "part": "4", "section": "4.32", "paragraph": "(a)",
+      "beverage_type": "wine", "effective_date": "2020-01-01",
+      "source_url": "https://www.ecfr.gov/current/title-27/section-4.32",
+      "heading": "Mandatory label information for wine",
+      "text": "Labels of wine must state: the brand name; the class, type, or other designation; the alcohol content; the name and address of the bottler or importer; and the net contents. The container must also bear the Government health warning statement required by 27 CFR part 16."
+    },
+    {
+      "part": "4", "section": "4.34", "paragraph": "(a)",
+      "beverage_type": "wine", "effective_date": "2020-01-01",
+      "source_url": "https://www.ecfr.gov/current/title-27/section-4.34",
+      "heading": "Class and type designation for wine",
+      "text": "The class and type of a wine must be stated in accordance with the standards of identity (for example, 'table wine', 'red wine', a grape varietal designation, or a recognized appellation of origin). The designation must be conspicuous and not misleading."
+    },
+    {
+      "part": "4", "section": "4.36", "paragraph": "(a)",
+      "beverage_type": "wine", "effective_date": "2020-01-01",
+      "source_url": "https://www.ecfr.gov/current/title-27/section-4.36",
+      "heading": "Alcohol content statement for wine",
+      "text": "Alcohol content for wine must be stated as a percentage of alcohol by volume. Table wine may instead be labeled 'table wine' or 'light wine' without a numerical alcohol statement. Tolerances apply to the stated percentage."
+    },
+    {
+      "part": "4", "section": "4.25", "paragraph": "(a)",
+      "beverage_type": "wine", "effective_date": "2020-01-01",
+      "source_url": "https://www.ecfr.gov/current/title-27/section-4.25",
+      "heading": "Appellation of origin for wine",
+      "text": "An appellation of origin (such as a country, state, county, or approved viticultural area) may appear on a wine label only if the stated percentage of the wine was produced from grapes grown in the named place, in accordance with the applicable percentage requirements."
+    }
+  ]
+}

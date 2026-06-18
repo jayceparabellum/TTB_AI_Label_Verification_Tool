@@ -69,11 +69,16 @@ def test_list_flagged_no_batch_is_friendly():
     assert out["flagged"] == [] and "No batch" in out["note"]
 
 
-def test_rag_tools_are_refusing_stubs():
-    rl = T.regulatory_lookup.invoke({"question": "what does a wine label need?"})
-    assert rl["status"] == "unavailable" and rl["answer"] is None
-    ef = T.explain_flag.invoke({"field": "warning", "failure_reason": "title case"})
-    assert ef["status"] == "unavailable" and ef["explanation"] is None
+def test_rag_tools_are_grounded_cite_or_refuse():
+    # In-corpus -> answered with a citation; out-of-corpus -> refused (no memory).
+    rl = T.regulatory_lookup.invoke({"question": "what does a wine label need?",
+                                     "beverage_type": "wine"})
+    assert rl["status"] == "answered" and rl["citations"]
+    refused = T.regulatory_lookup.invoke({"question": "vodka proof requirement"})
+    assert refused["status"] == "refused" and refused["citations"] == []
+    ef = T.explain_flag.invoke({"field": "government_warning",
+                                "failure_reason": "header is Title case not ALL CAPS"})
+    assert ef["status"] == "answered" and ef["citations"][0]["section"] == "16.22"
 
 
 def test_manual_fallback_is_gated_then_audited():

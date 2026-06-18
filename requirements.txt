@@ -13,4 +13,8 @@ langgraph==1.2.5
 langgraph-checkpoint-sqlite==3.1.0
 langchain-core==1.4.7
 langchain-ollama==1.1.0
-# Layer 3 (RAG) deps are added in Phase C: sentence-transformers, chromadb, rank-bm25
+# --- Layer 3: local RAG knowledge layer (Phase C) ---
+rank-bm25==0.2.2
+# Dense embeddings (BGE-small via sentence-transformers + chromadb) are host-deferred:
+# retrieval is BM25-only and fully offline until the host is provisioned. Enable with:
+#   sentence-transformers, chromadb   (see rag/retrieve.py DenseBackend)

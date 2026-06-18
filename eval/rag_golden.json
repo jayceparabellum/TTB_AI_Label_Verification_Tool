@@ -1,0 +1,13 @@
+{
+  "_about": "Golden Q&A set for the RAG layer. 'section' is the controlling citation expected among the answer's citations; null means the query is out-of-corpus and the system MUST refuse.",
+  "cases": [
+    {"q": "what does a wine label need?", "section": "4.32", "bt": "wine"},
+    {"q": "alcohol content statement for wine", "section": "4.36", "bt": "wine"},
+    {"q": "class and type designation for wine", "section": "4.34", "bt": "wine"},
+    {"q": "appellation of origin on a wine label", "section": "4.25", "bt": "wine"},
+    {"q": "government warning capital letters bold format", "section": "16.22", "bt": null},
+    {"q": "who must put the health warning on the container", "section": "16.20", "bt": null},
+    {"q": "what is the proof requirement for vodka", "section": null, "bt": null},
+    {"q": "how do I bake sourdough bread", "section": null, "bt": null}
+  ]
+}

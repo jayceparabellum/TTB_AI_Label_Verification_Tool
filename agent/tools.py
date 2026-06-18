@@ -152,24 +152,24 @@ def manual_fallback(
     return {"ok": True, "field": field, "value": value.strip(), "recorded_id": row}
 
 
-# --- RAG tools: STUBS until Phase C (they REFUSE rather than answer from memory) --
-_RAG_STUB = ("The citation-grounded regulatory knowledge layer is not built yet "
-             "(coming in the next phase). I will not answer regulatory questions "
-             "from memory.")
-
-
+# --- RAG tools: grounded, cite-or-refuse (Layer 3) ----------------------------
 @tool
 def regulatory_lookup(question: str, beverage_type: str = "") -> dict:
-    """Answer a regulatory question with citations to 27 CFR. (Stub — refuses until
-    the RAG layer is built.)"""
-    return {"status": "unavailable", "answer": None, "citations": [], "message": _RAG_STUB}
+    """Answer a regulatory question (e.g. 'what does a wine label need?') ONLY from
+    the regulations on file, always with a 27 CFR citation. Refuses if the answer
+    isn't in the corpus. Never answer regulatory questions from your own memory —
+    always call this tool."""
+    from rag import generate
+    return generate.answer(question, beverage_type or None)
 
 
 @tool
 def explain_flag(field: str, failure_reason: str) -> dict:
-    """Attach the controlling regulation to a FLAG, with a citation. (Stub —
-    refuses until the RAG layer is built.)"""
-    return {"status": "unavailable", "explanation": None, "citations": [], "message": _RAG_STUB}
+    """Attach the controlling regulation (with citation) to a deterministic FLAG —
+    e.g. a Title-case warning header maps to the ALL-CAPS rule in 27 CFR 16.22.
+    Grounded in the corpus; refuses if no controlling rule is found."""
+    from rag import generate
+    return generate.explain_flag(field, failure_reason)
 
 
 READ_TOOLS = [verify_label, extract_label_fields, verify_warning, list_flagged,
