@@ -166,6 +166,21 @@ throttled for OCR — see the latency note below). Health check at `/health`.
 
 ## Trade-offs & known limitations
 
+> **Master-brief Phase-1 mapping.** This repo *is* the brief's Layer-1
+> verification core. The function names differ from the brief's pseudo-names
+> (`extract_text`/`extract_text_data` ≈ `extract_fields`; `match_brand` +
+> `match_alcohol_content` ≈ `fuzzy_match`; `match_government_warning` ≈
+> `verify_warning_strict`), and OCR structures the three verdict-bearing fields
+> (brand, ABV, warning) rather than the brief's seven. **One deliberate deviation:**
+> the brief specifies a *strict, word-for-word* warning match, but the implemented
+> matcher is a **high-threshold fuzzy match (≥ 99% similarity)** anchored on the
+> ALL-CAPS `GOVERNMENT WARNING:` header. This was a measured choice — exact-substring
+> matching false-flagged compliant labels whenever OCR dropped a single character in
+> the 283-char §16.21 block; the fuzzy threshold tolerates that noise while still
+> failing Title-case, missing, or genuinely-altered warnings (see `eval/REPORT.md`,
+> 0% confident-error margin). The agent + RAG layers (Phases 2–3) are planned in
+> `docs/plans/2026-06-18-001-feat-conversational-agent-rag-plan.md` and not yet built.
+
 - **Bold-text detection is intentionally skipped.** The warning legally must also
   be **bold**, but font weight is unreliable to detect from a photographed label
   via OCR. We verify presence, exact wording, and ALL CAPS — not boldness. This is
