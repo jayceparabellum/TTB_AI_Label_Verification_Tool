@@ -1,6 +1,6 @@
 {
-  "_about": "Curated, citation-tagged excerpts of the actual 27 CFR sections used by the RAG layer (Layer 3). Each chunk is one citable unit; metadata IS the citation. §16.21 is verbatim (the official statement); the others are faithful, conservative statements of the cited section's requirement. Covers the health warning (Part 16) and the per-commodity labeling rules: wine (Part 4), distilled spirits (Part 5), and malt beverages (Part 7). This committed corpus keeps the prototype fully OFFLINE and reproducible; the full live eCFR ingest (all of Parts 4/5/7/16 + the BAM) is the deferred build-time step. Verify any chunk against the source_url; the post-2020 modernized Part 5/7 section numbers in particular should be confirmed against eCFR before operational use.",
-  "_retrieved": "2026-06-18 (representative effective dates; confirm against eCFR before operational use)",
+  "_about": "Curated, citation-tagged excerpts of the actual 27 CFR sections used by the RAG layer (Layer 3). Each chunk is one citable unit; metadata IS the citation. §16.21 is verbatim (the official statement); the others are faithful, conservative statements of the cited section's requirement. Covers the health warning (Part 16) and the per-commodity labeling rules: wine (Part 4), distilled spirits (Part 5), and malt beverages (Part 7). This committed corpus keeps the prototype fully OFFLINE and reproducible; the full live eCFR ingest (all of Parts 4/5/7/16 + the BAM) is the deferred build-time step. All section NUMBERS were verified against the live eCFR structure API for title 27 (issue date 2026-06-10): wine §4.25/§4.32/§4.34/§4.36, spirits §5.63/§5.65/§5.74, malt §7.63/§7.65, warning §16.20/§16.21/§16.22. The 'heading' field is a descriptive label for retrieval, not the verbatim eCFR section title (e.g. eCFR §16.21 is titled 'Mandatory label information' but contains the GOVERNMENT WARNING text). Effective dates remain representative; confirm exact wording against the source_url before operational use.",
+  "_retrieved": "2026-06-18; section numbers verified against eCFR title-27 structure (issue date 2026-06-10)",
   "chunks": [
     {
       "part": "16", "section": "16.20", "paragraph": "(a)",
@@ -63,14 +63,14 @@
       "beverage_type": "spirits", "effective_date": "2020-01-01",
       "source_url": "https://www.ecfr.gov/current/title-27/section-5.65",
       "heading": "Alcohol content statement for distilled spirits",
-      "text": "Alcohol content for distilled spirits must be stated as a percentage of alcohol by volume. The equivalent proof (two times the percentage of alcohol by volume) may also be shown in direct conjunction with the percentage statement. This requirement applies to all distilled spirits, including vodka, whisky, rum, gin, brandy, and tequila."
+      "text": "Alcohol content for distilled spirits must be stated on the label as a percentage of alcohol by volume. The alcohol content in degrees of proof may also be shown, as long as it appears in the same field of vision as the mandatory percentage-of-alcohol-by-volume statement. This applies to all distilled spirits, including vodka, whisky, rum, gin, brandy, and tequila."
     },
     {
-      "part": "5", "section": "5.66", "paragraph": "(a)",
+      "part": "5", "section": "5.74", "paragraph": "(a)",
       "beverage_type": "spirits", "effective_date": "2020-01-01",
-      "source_url": "https://www.ecfr.gov/current/title-27/section-5.66",
-      "heading": "Age statements for distilled spirits",
-      "text": "An age statement is required on the label of whisky, brandy, and rum that is less than four years old, and is optional for older products. When an age is stated, it must be the age of the youngest distilled spirit in the product, expressed in years. Age and maturity representations must not be misleading."
+      "source_url": "https://www.ecfr.gov/current/title-27/section-5.74",
+      "heading": "Statements of age, storage, and percentage for distilled spirits",
+      "text": "Age is the length of time, after distillation and before bottling, that distilled spirits are stored in oak barrels. For any whisky aged less than 4 years — including a blend that contains such whisky — an age statement and a percentage-of-types-of-whisky statement are required on the label, unless it is labeled 'bottled in bond'; for other whiskies these statements are optional. Understating age is permitted but overstating it is prohibited, and an age statement may not conflict with a standard of identity."
     },
     {
       "part": "7", "section": "7.63", "paragraph": "(a)",
@@ -84,7 +84,7 @@
       "beverage_type": "malt", "effective_date": "2020-01-01",
       "source_url": "https://www.ecfr.gov/current/title-27/section-7.65",
       "heading": "Alcohol content statement for malt beverages",
-      "text": "When alcohol content is stated on a malt beverage label, it must be expressed as a percentage of alcohol by volume. An alcohol content statement is mandatory where required by State law and is otherwise optional, except that it must appear when the malt beverage is labeled with certain strength or potency representations."
+      "text": "Alcohol content, and the percentage and quantity of the original gravity or extract, may be stated on a malt beverage label unless prohibited by State law; a statement is required only where State law requires it. When alcohol content is stated, it must be expressed as a percentage of alcohol by volume in the prescribed manner."
     }
   ]
 }

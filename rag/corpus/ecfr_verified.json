@@ -1,0 +1,18 @@
+{
+  "_about": "Offline snapshot of the 27 CFR section identifiers used by the corpus, each confirmed to exist with the given official heading via the live eCFR structure API (title 27). Used by tests/test_rag.py to guard against a corpus chunk citing a wrong/nonexistent section number (the §5.66->§5.74 class of error). Headings are the verbatim eCFR section titles; the corpus 'heading' field is a descriptive retrieval label and may differ. Refresh by re-querying https://www.ecfr.gov/api/versioner/v1/structure/<date>/title-27.json.",
+  "verified_against": "eCFR title-27 structure, issue date 2026-06-10",
+  "sections": {
+    "4.25": {"part": "4", "heading": "Appellations of origin."},
+    "4.32": {"part": "4", "heading": "Mandatory label information."},
+    "4.34": {"part": "4", "heading": "Class and type."},
+    "4.36": {"part": "4", "heading": "Alcoholic content."},
+    "5.63": {"part": "5", "heading": "Mandatory label information."},
+    "5.65": {"part": "5", "heading": "Alcohol content."},
+    "5.74": {"part": "5", "heading": "Statements of age, storage, and percentage."},
+    "7.63": {"part": "7", "heading": "Mandatory label information."},
+    "7.65": {"part": "7", "heading": "Alcohol content."},
+    "16.20": {"part": "16", "heading": "General."},
+    "16.21": {"part": "16", "heading": "Mandatory label information."},
+    "16.22": {"part": "16", "heading": "General requirements."}
+  }
+}

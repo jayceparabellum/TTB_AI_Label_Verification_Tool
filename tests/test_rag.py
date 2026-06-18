@@ -1,9 +1,25 @@
 """Layer 3 — RAG: ingest metadata, term-heavy retrieval, and the cite-or-refuse
 contract (cites in-corpus, refuses out-of-corpus, faithful to chunks)."""
 
+import json
+from pathlib import Path
+
 from rag import generate
 from rag.ingest import load_corpus
 from rag.retrieve import Retriever
+
+_VERIFIED = Path(__file__).resolve().parent.parent / "rag" / "corpus" / "ecfr_verified.json"
+
+
+def test_every_chunk_cites_an_ecfr_verified_section():
+    """Guard against the §5.66->§5.74 class of error: every corpus chunk must cite a
+    section number that exists in the eCFR-verified snapshot, under the matching part.
+    Offline (no network) — refresh the snapshot when the corpus gains sections."""
+    verified = json.loads(_VERIFIED.read_text())["sections"]
+    for c in load_corpus():
+        assert c.section in verified, f"§{c.section} is not in the eCFR-verified snapshot"
+        assert verified[c.section]["part"] == c.part, (
+            f"§{c.section} is in part {verified[c.section]['part']}, not {c.part}")
 
 
 def test_ingest_carries_citation_metadata():
