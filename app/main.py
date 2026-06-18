@@ -58,6 +58,9 @@ PROMPT_CHIPS = [
     ("Verify all the sample labels", ""),
     ("Show only the flagged ones", ""),
 ]
+# Exposed to every template so the global pop-out chat widget (in base.html) can
+# render the same chips without each route passing them.
+templates.env.globals["prompt_chips"] = PROMPT_CHIPS
 
 
 @app.get("/chat", response_class=HTMLResponse)

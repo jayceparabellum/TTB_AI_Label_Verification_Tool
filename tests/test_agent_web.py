@@ -53,6 +53,18 @@ def test_chat_page_renders_with_chips_and_nav():
     assert "chip" in html and 'href="/chat"' in html
 
 
+def test_popout_widget_on_every_page_except_chat():
+    # The global pop-out assistant rides on every page (with the same prompt chips
+    # + its client script) but is suppressed on the dedicated /chat page so there's
+    # never a double chat UI.
+    for path in ("/", "/text", "/batch"):
+        html = client.get(path).text
+        assert 'id="cw-root"' in html, f"{path}: widget missing"
+        assert "/static/chat-widget.js" in html and 'class="cw-chip"' in html
+    chat = client.get("/chat").text
+    assert 'id="cw-root"' not in chat          # suppressed on the full /chat page
+
+
 def test_agent_chat_streams_tool_step_and_final(monkeypatch):
     STORE.seed_samples()
     monkeypatch.setattr(agent_chat, "make_llm", lambda *a, **k: _ReadStub())

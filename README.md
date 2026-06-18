@@ -61,7 +61,7 @@ and point the app at it — `app/ocr.py` auto-detects a Tesseract under
 ## Tests and evaluation
 
 ```bash
-pytest                    # 154 unit + end-to-end tests
+pytest                    # 155 unit + end-to-end tests
 python eval/run_eval.py   # goal metrics + latency report -> eval/REPORT.md
 ```
 
@@ -152,9 +152,11 @@ tests/           # unit + end-to-end tests
 
 ## AI assistant (Layer 2) + regulatory knowledge (Layer 3)
 
-On top of the deterministic core, an additive **conversational agent** (`/chat`)
-lets an agent drive every feature in plain language, and a local **RAG knowledge
-layer** answers regulatory questions with citations. The governing rule everywhere:
+On top of the deterministic core, an additive **conversational agent** — reachable
+from the `/chat` page or a **pop-out widget docked bottom-right of every page**
+(minimizable; the conversation persists across navigation) — lets an agent drive
+every feature in plain language, and a local **RAG knowledge layer** answers
+regulatory questions with citations. The governing rule everywhere:
 **the LLM orchestrates and explains; it never adjudicates.** Pass/fail is always the
 deterministic core's; RAG grounds explanations but gets no vote; a human commits
 every change.

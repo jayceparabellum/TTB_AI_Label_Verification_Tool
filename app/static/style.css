@@ -220,3 +220,80 @@ textarea.mono { font-family: var(--mono); font-size: .98rem; }
   color: #1e3a8a; }
 .confirm-actions { display: flex; gap: 8px; margin-top: 10px; }
 .confirm-actions button { padding: 8px 16px; }
+
+/* --- Global pop-out assistant (chat-widget.js) ----------------------------- */
+.cw-root { position: fixed; right: 18px; bottom: 18px; z-index: 1000;
+  font-size: 1rem; }
+
+.cw-launcher { display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 18px; border: none; border-radius: 999px; cursor: pointer;
+  background: var(--accent); color: #fff; font: inherit; font-weight: 600;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, .28);
+  transition: transform .14s ease, opacity .14s ease, background .14s ease; }
+.cw-launcher:hover { background: var(--accent-dark); transform: translateY(-1px); }
+.cw-launcher-dot { font-size: 1.1rem; line-height: 1; }
+
+.cw-panel { position: absolute; right: 0; bottom: 0;
+  width: 370px; max-width: calc(100vw - 36px);
+  height: min(580px, 78vh);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; box-shadow: 0 16px 48px rgba(15, 23, 42, .30);
+  opacity: 0; visibility: hidden; transform: translateY(10px) scale(.98);
+  transform-origin: bottom right; pointer-events: none;
+  transition: opacity .16s ease, transform .16s ease, visibility .16s; }
+
+/* state machine: data-state on #cw-root */
+.cw-root[data-state="open"] .cw-panel { opacity: 1; visibility: visible;
+  transform: none; pointer-events: auto; }
+.cw-root[data-state="open"] .cw-launcher { opacity: 0; transform: scale(.9);
+  pointer-events: none; }
+.cw-root[data-state="closed"] .cw-panel { /* hidden via defaults above */ }
+
+.cw-header { display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; background: var(--accent); color: #fff; }
+.cw-title { font-weight: 600; font-size: 1rem; }
+.cw-header-actions { display: inline-flex; gap: 2px; }
+.cw-iconbtn { width: 30px; height: 30px; display: grid; place-items: center;
+  border: none; border-radius: 8px; background: transparent; color: #fff;
+  font-size: 1.1rem; line-height: 1; cursor: pointer; }
+.cw-iconbtn:hover { background: rgba(255, 255, 255, .18); }
+
+.cw-log { flex: 1; min-height: 0; overflow-y: auto; padding: 14px;
+  display: flex; flex-direction: column; gap: 10px; background: var(--surface-sunken); }
+.cw-log:empty::before { content: "Ask about a label, a flag, or a 27 CFR rule.";
+  color: var(--muted); font-size: .92rem; margin: auto; text-align: center; max-width: 220px; }
+
+.cw-chips { display: flex; gap: 8px; padding: 10px 12px 0; overflow-x: auto;
+  scrollbar-width: thin; }
+.cw-chip { flex: 0 0 auto; white-space: nowrap; background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: 999px;
+  padding: 7px 13px; font: inherit; font-size: .85rem; color: var(--ink-soft);
+  cursor: pointer; transition: border-color .12s, color .12s; }
+.cw-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+.cw-form { display: flex; gap: 8px; padding: 12px; align-items: center; }
+.cw-form input[type=text] { flex: 1; padding: 11px 13px; font: inherit;
+  border: 1px solid var(--border-strong); border-radius: 10px; }
+.cw-form input[type=text]:focus { outline: none; border-color: var(--accent);
+  box-shadow: var(--ring); }
+.cw-send { flex: 0 0 auto; width: 42px; height: 42px; border: none;
+  border-radius: 10px; background: var(--accent); color: #fff; font-size: 1.2rem;
+  cursor: pointer; }
+.cw-send:hover { background: var(--accent-dark); }
+.cw-send:disabled { opacity: .5; cursor: default; }
+
+.cw-foot { margin: 0; padding: 0 14px 12px; font-size: .76rem; color: var(--muted);
+  line-height: 1.35; }
+
+/* full-screen on small viewports */
+@media (max-width: 480px) {
+  .cw-root { right: 14px; bottom: 14px; }
+  .cw-root[data-state="open"] { right: 0; bottom: 0; left: 0; top: 0; }
+  .cw-panel { position: fixed; inset: 0; width: auto; height: auto;
+    max-width: none; border-radius: 0; border: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cw-launcher, .cw-panel { transition: none; }
+}
