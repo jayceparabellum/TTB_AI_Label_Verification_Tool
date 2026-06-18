@@ -278,10 +278,11 @@ Everything stays local — no outbound calls at request time.
   strong for term-heavy regulatory queries; dense adds synonym/paraphrase recall.
 - **RAG corpus is a curated excerpt, not the full live eCFR.** The committed corpus
   is 27 CFR Part 16 + labeling slices of Parts 4 (wine), 5 (distilled spirits), and 7
-  (malt beverages), citation-accurate and offline; §16.21 is verbatim. The post-2020
-  modernized Part 5/7 section numbers in particular should be confirmed against eCFR
-  before operational use. The full live ingest of Parts 4/5/7/16 + the TTB Beverage
-  Alcohol Manual is the deferred build-time step. Every chunk carries a `source_url` to verify
+  (malt beverages), citation-accurate and offline; §16.21 is verbatim. All section
+  **numbers are verified against the live eCFR** structure API (title 27, issue date
+  2026-06-10); chunk wording is a faithful conservative summary, so confirm exact text
+  against each `source_url` before operational use. The full live ingest of
+  Parts 4/5/7/16 + the TTB Beverage Alcohol Manual is the deferred build-time step. Every chunk carries a `source_url` to verify
   against eCFR.
 - **Out of scope for this POC.** COLA / government-system integration and
   authentication are deliberately not built (candidate next steps). Batch
