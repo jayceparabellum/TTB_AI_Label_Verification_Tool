@@ -102,6 +102,18 @@ def test_low_confidence_image_needs_review():
     assert r.overall_pass is False        # needs_review supersedes PASS
 
 
+def test_unreadable_warning_region_defers_to_review_at_high_confidence():
+    # The bug this guards: a label whose warning region didn't OCR (header
+    # absent) but whose OVERALL mean confidence is high must be routed to NEEDS
+    # REVIEW, not a confident FLAG of "warning missing" on a compliant label.
+    from app.verify import reverify_text
+
+    text = "Stone's Throw\nCraft Lager\nALC 5.0% BY VOL\n12 FL OZ"  # warning region unread
+    r = reverify_text(text, brand="Stone's Throw", alcohol_content="5.0", confidence=95.0)
+    assert r.needs_review is True          # inconclusive warning -> defer
+    assert r.overall_pass is False
+
+
 def test_preprocessing_on_keeps_clean_verdicts_no_spurious_review():
     # Regression guard (U3): with OpenCV preprocessing on (default), a clean label
     # still passes all fields and is not pushed below the needs-review threshold.

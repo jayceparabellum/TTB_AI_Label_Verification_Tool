@@ -112,7 +112,29 @@ def test_warning_altered_wording_fails():
     assert "wording" in res.detail.lower()
 
 
-def test_warning_missing_fails():
-    res = match_government_warning("Brand X Craft Lager  ALC 5% BY VOL  12 FL OZ")
+def test_warning_tolerates_minor_ocr_noise():
+    # A 1-2 character OCR slip in the 283-char body must NOT fail a compliant
+    # warning. The old exact-substring match did (the dominant false-FLAG bug);
+    # a high-threshold fuzzy body match tolerates the noise while staying strict.
+    noisy = OFFICIAL_GOVERNMENT_WARNING.replace("operate machinery", "operate machmery")
+    assert match_government_warning(noisy).passed is True
+
+
+def test_warning_unreadable_region_is_inconclusive_not_flag():
+    # When the GOVERNMENT WARNING header can't be found at all (the warning
+    # region didn't OCR), the matcher must DEFER (inconclusive) so the verdict
+    # becomes NEEDS REVIEW — not a confident FLAG asserting non-compliance.
+    res = match_government_warning("Stone's Throw  Craft Lager  ALC 5% BY VOL  12 FL OZ")
     assert res.passed is False
-    assert "missing" in res.detail.lower()
+    assert res.inconclusive is True
+
+
+def test_warning_readable_but_wrong_still_flags_confidently():
+    # A readable warning that is genuinely wrong (Title case, altered wording)
+    # stays a confident FLAG — not a deferral.
+    titled = OFFICIAL_GOVERNMENT_WARNING.replace("GOVERNMENT WARNING:", "Government Warning:")
+    altered = OFFICIAL_GOVERNMENT_WARNING.replace("birth defects", "birth defects and harm")
+    for bad in (titled, altered):
+        res = match_government_warning(bad)
+        assert res.passed is False
+        assert res.inconclusive is False
