@@ -4,6 +4,7 @@ FROM python:3.12-slim
 # environment with no outbound ML/cloud calls.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends tesseract-ocr fonts-dejavu-core \
+       libglib2.0-0 libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
