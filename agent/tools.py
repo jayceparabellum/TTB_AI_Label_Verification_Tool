@@ -51,6 +51,34 @@ def run_verify(image_id: str | None, brand: str, alcohol_content: str) -> dict:
     }
 
 
+def _regulation_for(field: str, detail: str) -> dict | None:
+    """Look up the controlling regulation for a FLAGGED field via the RAG corpus.
+    Advisory annotation only — it never changes the verdict. Any retrieval failure
+    returns None so verification degrades gracefully and RAG can't break the result.
+    Runs off the deterministic core path, so it never affects the < 5s verify SLA."""
+    from rag import generate
+    try:
+        g = generate.explain_flag(field, detail or "")
+    except Exception:
+        return None
+    if g.get("status") != "answered":
+        return None
+    cite = (g.get("citations") or [{}])[0]
+    return {"citation": cite.get("citation"), "section": cite.get("section"),
+            "explanation": g.get("explanation")}
+
+
+def _attach_regulations(result: dict) -> dict:
+    """Attach the controlling regulation to every FLAGGED field. Deterministic
+    pass/fail is untouched; this only adds a grounded, cited explanation."""
+    for f in result.get("fields", []):
+        if f.get("passed") is False:
+            reg = _regulation_for(f["field"], f.get("detail", ""))
+            if reg:
+                f["regulation"] = reg
+    return result
+
+
 @tool
 def verify_label(
     brand: str,
@@ -59,9 +87,11 @@ def verify_label(
 ) -> dict:
     """Verify the currently-loaded label image against the claimed brand and
     alcohol content. Returns the deterministic per-field PASS/FLAG verdict — this
-    is the authoritative result, not your opinion. The image is taken from the
-    active session (you do not supply it)."""
-    return run_verify(state.get("active_image_id"), brand, alcohol_content)
+    is the authoritative result, not your opinion. Any FLAG carries the controlling
+    27 CFR regulation (grounded + cited) so you can explain *why* it failed. The
+    image is taken from the active session (you do not supply it)."""
+    result = run_verify(state.get("active_image_id"), brand, alcohol_content)
+    return _attach_regulations(result)
 
 
 @tool
