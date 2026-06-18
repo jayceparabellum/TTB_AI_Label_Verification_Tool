@@ -1,5 +1,5 @@
 {
-  "_about": "Curated, citation-tagged excerpts of the actual 27 CFR sections used by the RAG layer (Layer 3). Each chunk is one citable unit; metadata IS the citation. §16.21 is verbatim (the official statement); the others are faithful, conservative statements of the cited section's requirement. This committed corpus keeps the prototype fully OFFLINE and reproducible; the full live eCFR ingest (all of Parts 4/5/7/16 + BAM) is the deferred build-time step. Verify any chunk against the source_url.",
+  "_about": "Curated, citation-tagged excerpts of the actual 27 CFR sections used by the RAG layer (Layer 3). Each chunk is one citable unit; metadata IS the citation. §16.21 is verbatim (the official statement); the others are faithful, conservative statements of the cited section's requirement. Covers the health warning (Part 16) and the per-commodity labeling rules: wine (Part 4), distilled spirits (Part 5), and malt beverages (Part 7). This committed corpus keeps the prototype fully OFFLINE and reproducible; the full live eCFR ingest (all of Parts 4/5/7/16 + the BAM) is the deferred build-time step. Verify any chunk against the source_url; the post-2020 modernized Part 5/7 section numbers in particular should be confirmed against eCFR before operational use.",
   "_retrieved": "2026-06-18 (representative effective dates; confirm against eCFR before operational use)",
   "chunks": [
     {
@@ -50,6 +50,41 @@
       "source_url": "https://www.ecfr.gov/current/title-27/section-4.25",
       "heading": "Appellation of origin for wine",
       "text": "An appellation of origin (such as a country, state, county, or approved viticultural area) may appear on a wine label only if the stated percentage of the wine was produced from grapes grown in the named place, in accordance with the applicable percentage requirements."
+    },
+    {
+      "part": "5", "section": "5.63", "paragraph": "(a)",
+      "beverage_type": "spirits", "effective_date": "2020-01-01",
+      "source_url": "https://www.ecfr.gov/current/title-27/section-5.63",
+      "heading": "Mandatory label information for distilled spirits",
+      "text": "Labels of distilled spirits must state: the brand name; the class and type or other designation; the alcohol content; the name and address of the bottler or importer; the net contents; and, where applicable, a commodity statement. The container must also bear the Government health warning statement required by 27 CFR part 16."
+    },
+    {
+      "part": "5", "section": "5.65", "paragraph": "(a)",
+      "beverage_type": "spirits", "effective_date": "2020-01-01",
+      "source_url": "https://www.ecfr.gov/current/title-27/section-5.65",
+      "heading": "Alcohol content statement for distilled spirits",
+      "text": "Alcohol content for distilled spirits must be stated as a percentage of alcohol by volume. The equivalent proof (two times the percentage of alcohol by volume) may also be shown in direct conjunction with the percentage statement. This requirement applies to all distilled spirits, including vodka, whisky, rum, gin, brandy, and tequila."
+    },
+    {
+      "part": "5", "section": "5.66", "paragraph": "(a)",
+      "beverage_type": "spirits", "effective_date": "2020-01-01",
+      "source_url": "https://www.ecfr.gov/current/title-27/section-5.66",
+      "heading": "Age statements for distilled spirits",
+      "text": "An age statement is required on the label of whisky, brandy, and rum that is less than four years old, and is optional for older products. When an age is stated, it must be the age of the youngest distilled spirit in the product, expressed in years. Age and maturity representations must not be misleading."
+    },
+    {
+      "part": "7", "section": "7.63", "paragraph": "(a)",
+      "beverage_type": "malt", "effective_date": "2020-01-01",
+      "source_url": "https://www.ecfr.gov/current/title-27/section-7.63",
+      "heading": "Mandatory label information for malt beverages",
+      "text": "Labels of malt beverages must state: the brand name; the class and type or other designation (for example, 'beer', 'ale', 'lager', or 'malt liquor'); the name and address of the brewer, bottler, or importer; and the net contents. The container must also bear the Government health warning statement required by 27 CFR part 16."
+    },
+    {
+      "part": "7", "section": "7.65", "paragraph": "(a)",
+      "beverage_type": "malt", "effective_date": "2020-01-01",
+      "source_url": "https://www.ecfr.gov/current/title-27/section-7.65",
+      "heading": "Alcohol content statement for malt beverages",
+      "text": "When alcohol content is stated on a malt beverage label, it must be expressed as a percentage of alcohol by volume. An alcohol content statement is mandatory where required by State law and is otherwise optional, except that it must appear when the malt beverage is labeled with certain strength or potency representations."
     }
   ]
 }
