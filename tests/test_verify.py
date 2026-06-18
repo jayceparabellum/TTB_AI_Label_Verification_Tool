@@ -107,13 +107,13 @@ def test_uneven_lighting_shadow_is_corrected_and_reads():
     import numpy as np
     from PIL import Image
 
-    a = np.asarray(Image.open(SAMPLES / "clean_pass.png").convert("RGB")).astype(np.float32)
+    a = np.asarray(Image.open(SAMPLES_DIR / "clean_pass.png").convert("RGB")).astype(np.float32)
     ramp = np.linspace(0.45, 1.0, a.shape[1])[None, :, None]          # 0.45x on the left edge
     shadowed = Image.fromarray(np.clip(a * ramp, 0, 255).astype(np.uint8))
     buf = io.BytesIO()
     shadowed.save(buf, format="PNG")
     r = verify_label(buf.getvalue(), brand="Stone's Throw", alcohol_content="5.0")
-    verdicts = {f.field: f.passed for f in r.fields}
+    verdicts = r.verdicts
     assert verdicts["brand"] is True                 # brand recovered from the shadow
     assert verdicts["government_warning"] is True     # warning header recovered too
 
