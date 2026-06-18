@@ -219,10 +219,12 @@ docker build -t ttb-label-verification .
 docker run -p 8000:8000 ttb-label-verification
 ```
 
-`render.yaml` declares a Docker web service for one-click deploy on Render;
-`scripts/deploy_render.sh` is a one-command deploy once `render login` is done.
-The live instance runs on Render's **Starter** plan (free tier's 0.1 CPU is too
-throttled for OCR — see the latency note below). Health check at `/health`.
+`render.yaml` declares a Docker web service for one-click deploy on Render. The
+live instance runs in the **`ttb-label-verification` Render project** (Production
+environment) on the **Starter** plan — the free tier's 0.1 CPU is too throttled for
+OCR (see the latency note below). It **auto-deploys on push to `main`**; you can also
+trigger a deploy from the Render dashboard or with `scripts/deploy_render.sh` (after
+`render login`). Health check at `/health`; live URL at the top of this README.
 
 The **conversational agent** needs a local Ollama model, which the Starter host
 can't run — there the chat degrades gracefully and the button verifier is the path.
