@@ -1,0 +1,11 @@
+# Real phone photo of a Cîroc Snap Frost vodka bottle (901x1200).
+# Source: Open Food Facts product 0000008215309 — https://world.openfoodfacts.org
+# License: CC-BY-SA 3.0, Open Food Facts contributors.
+# Cîroc's thin silver-on-clear-glass label is genuinely hard for OCR: even at this
+# resolution it reads at ~40% confidence, so the system DEFERS to human review
+# rather than guessing. (The earlier 257px image tripped the "couldn't read"
+# gate; this higher-res one is processable and exercises the review path.)
+# Format: brand|abv|exp_brand,exp_alcohol,exp_warning
+# TRUE verdict from the photo: brand and 40% ABV are legible to a human (pass);
+# no US 27 CFR 16.21 warning is present/legible on this imported bottle (flag).
+Cîroc|40|pass,pass,flag

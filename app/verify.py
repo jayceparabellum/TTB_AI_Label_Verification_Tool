@@ -23,6 +23,16 @@ UNREADABLE_MESSAGE = (
 )
 
 
+def _needs_review(confidence: float, fields: list[FieldResult]) -> bool:
+    """Defer to a human when the read is marginal OR a field couldn't be assessed.
+
+    Two independent signals: a low mean OCR confidence (the whole read is shaky),
+    or any field marked `inconclusive` (its region didn't OCR — e.g. the warning
+    block is unreadable even though the rest of the label scanned fine, which the
+    global mean confidence would otherwise miss)."""
+    return confidence < ocr.OCR_CONFIDENCE_THRESHOLD or any(f.inconclusive for f in fields)
+
+
 def verify_fields(
     text: str,
     brand: str,
@@ -63,7 +73,7 @@ def reverify_text(
         elapsed_ms=int((time.perf_counter() - start) * 1000),
         ocr_text=text,
         confidence=confidence,
-        needs_review=confidence < ocr.OCR_CONFIDENCE_THRESHOLD,
+        needs_review=_needs_review(confidence, fields),
     )
 
 
@@ -103,5 +113,5 @@ def verify_label(
         elapsed_ms=int((time.perf_counter() - start) * 1000),
         ocr_text=text,
         confidence=confidence,
-        needs_review=confidence < ocr.OCR_CONFIDENCE_THRESHOLD,
+        needs_review=_needs_review(confidence, fields),
     )

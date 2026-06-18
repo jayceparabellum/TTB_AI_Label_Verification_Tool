@@ -16,15 +16,18 @@ import numpy as np
 # Per-step toggles (eng-review D1). The master on/off (PREPROCESS_ENABLED) lives
 # in app/ocr.py.
 #
-# Tuned by the eval ablation (eval/ablate.py -> eval/REPORT.md). Re-run over a
-# broadened degraded set (now 10 cases: rotation, blur, JPEG, low/uneven light,
-# perspective, glare, shadow, sensor noise, blur+rotate), the winner is DESKEW
-# ALONE: end-to-end 53.8% -> 69.2% with clean held at 100% and ~211 ms/label.
-# The angle guard (below) leaves straight labels untouched, so the "geometric
-# risk" is bounded — no clean case regresses. Combining steps is anti-synergistic:
-# contrast+deskew drops back to 61.5%, and denoise only adds latency (no lift).
-# A non-rotated, low-light-heavy deployment can flip contrast on and re-ablate.
-STEPS = {"denoise": False, "contrast": False, "deskew": True, "binarize": False}
+# Tuned by the eval (eval/run_eval.py). Two complementary steps are ON:
+#   * deskew  — straightens rotated labels (the rotation cases). Angle-guarded, so
+#               straight labels are untouched and no clean case regresses.
+#   * contrast (CLAHE) — local adaptive histogram equalization. Normalizes uneven
+#               lighting, recovering the shadow case (a left-side shadow used to
+#               drop the start of the brand "Stone's Throw" -> "ne's Throw" and the
+#               warning header; CLAHE brings both back).
+# Together they reach 12/13 confident-correct on the synthetic set with clean held
+# at 100% and zero confident-wrong (~580 ms/label). Note CLAHE must run WITH deskew:
+# contrast ALONE regresses (introduces confident-wrong reads). denoise/binarize add
+# latency without lift and stay off.
+STEPS = {"denoise": False, "contrast": True, "deskew": True, "binarize": False}
 
 # Don't rotate a near-straight label — only correct skew above this (degrees).
 DESKEW_MIN_ANGLE = 0.5

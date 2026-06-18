@@ -102,6 +102,38 @@ def test_low_confidence_image_needs_review():
     assert r.overall_pass is False        # needs_review supersedes PASS
 
 
+def test_uneven_lighting_shadow_is_corrected_and_reads():
+    # A left->right darkening gradient (shadow on one side) used to suppress the
+    # start of the label: the brand OCR'd as "ne's Throw" (not "Stone's Throw")
+    # and the warning header didn't read. CLAHE contrast in the preprocessing
+    # pipeline normalizes the uneven lighting so both recover.
+    import io
+    import numpy as np
+    from PIL import Image
+
+    a = np.asarray(Image.open(SAMPLES / "clean_pass.png").convert("RGB")).astype(np.float32)
+    ramp = np.linspace(0.45, 1.0, a.shape[1])[None, :, None]          # 0.45x on the left edge
+    shadowed = Image.fromarray(np.clip(a * ramp, 0, 255).astype(np.uint8))
+    buf = io.BytesIO()
+    shadowed.save(buf, format="PNG")
+    r = verify_label(buf.getvalue(), brand="Stone's Throw", alcohol_content="5.0")
+    verdicts = {f.field: f.passed for f in r.fields}
+    assert verdicts["brand"] is True                 # brand recovered from the shadow
+    assert verdicts["government_warning"] is True     # warning header recovered too
+
+
+def test_unreadable_warning_region_defers_to_review_at_high_confidence():
+    # The bug this guards: a label whose warning region didn't OCR (header
+    # absent) but whose OVERALL mean confidence is high must be routed to NEEDS
+    # REVIEW, not a confident FLAG of "warning missing" on a compliant label.
+    from app.verify import reverify_text
+
+    text = "Stone's Throw\nCraft Lager\nALC 5.0% BY VOL\n12 FL OZ"  # warning region unread
+    r = reverify_text(text, brand="Stone's Throw", alcohol_content="5.0", confidence=95.0)
+    assert r.needs_review is True          # inconclusive warning -> defer
+    assert r.overall_pass is False
+
+
 def test_preprocessing_on_keeps_clean_verdicts_no_spurious_review():
     # Regression guard (U3): with OpenCV preprocessing on (default), a clean label
     # still passes all fields and is not pushed below the needs-review threshold.
