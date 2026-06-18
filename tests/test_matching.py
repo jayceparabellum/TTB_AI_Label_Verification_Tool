@@ -38,6 +38,25 @@ def test_short_brand_not_falsely_matched_by_substring():
     assert match_brand("Bud", "BUD").passed is True
 
 
+def test_long_brand_not_passed_by_short_garbage_candidate():
+    # Regression: a candidate SHORTER than the brand must not score 100 just
+    # because it appears as a substring of the brand. Garbled OCR "i" used to
+    # match the 'i' in "Daniel" and falsely pass "Jack Daniel's" at 100/100.
+    assert match_brand("Jack Daniel's", "i, = -").passed is False
+    assert match_brand("Jack Daniel's", "a").passed is False
+    # The full garbled OCR from a real (unreadable) bottle photo must not pass.
+    garbage = "4 ~ » Te >\ni, = -\nP|, oe 'J\nnor :\n& Ten —\nt i} 70cl40%Vol."
+    assert match_brand("Jack Daniel's", garbage).passed is False
+
+
+def test_long_brand_still_matches_when_genuinely_present():
+    # The fix must not break real reads: exact, and embedded in a longer line.
+    assert match_brand("Jack Daniel's", "JACK DANIEL'S").passed is True
+    assert match_brand(
+        "Jack Daniel's", "JACK DANIEL'S OLD NO. 7 TENNESSEE WHISKEY"
+    ).passed is True
+
+
 # --- Alcohol content (numeric, proof-aware) -----------------------------------
 @pytest.mark.parametrize(
     "claimed, ocr_text, should_pass",

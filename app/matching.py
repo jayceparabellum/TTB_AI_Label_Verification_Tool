@@ -65,24 +65,30 @@ def normalize_whitespace(text: str) -> str:
 def match_brand(expected: str, ocr_text: str) -> FieldResult:
     """Fuzzy brand match. Tolerant of case/punctuation/whitespace formatting."""
     exp_norm = normalize_loose(expected)
+    exp_len = len(exp_norm.replace(" ", ""))
     best_line, best_score = "", 0.0
 
     candidates = [ln.strip() for ln in ocr_text.splitlines() if ln.strip()]
     # Also consider the whole text as one candidate (handles single-line OCR).
     candidates.append(ocr_text.strip())
 
-    # partial_ratio finds a brand embedded in a longer line, but for a short
-    # brand it matches incidental substrings of the whole page (e.g. "Bud"
-    # against any "...bud..."), so only use it once the brand is long enough
-    # to be discriminating. Short brands must match a line closely (ratio).
-    use_partial = len(exp_norm.replace(" ", "")) >= 5
+    # partial_ratio finds a brand embedded in a *longer* line, but it scores by
+    # fitting the shorter string inside the longer one — so two failure modes:
+    #   1. For a short brand it matches incidental substrings of a busy page
+    #      ("Bud" inside "...Brewing..."), so require the brand be discriminating.
+    #   2. For ANY brand, a candidate SHORTER than the brand gets found *inside*
+    #      the brand and scores 100 — e.g. garbled OCR "i" matches the 'i' in
+    #      "danIel", falsely passing "Jack Daniel's". So only use partial_ratio
+    #      when the candidate is at least as long as the brand.
+    # In every other case a close plain ratio is required, which scores noise low.
+    brand_is_discriminating = exp_len >= 5
 
     for line in candidates:
         line_norm = normalize_loose(line)
         if not line_norm or not exp_norm:
             continue
         score = fuzz.ratio(exp_norm, line_norm)
-        if use_partial:
+        if brand_is_discriminating and len(line_norm.replace(" ", "")) >= exp_len:
             score = max(score, fuzz.partial_ratio(exp_norm, line_norm))
         if score > best_score:
             best_score, best_line = score, line.strip()

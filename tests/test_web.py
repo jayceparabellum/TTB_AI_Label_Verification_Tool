@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.reference import OFFICIAL_GOVERNMENT_WARNING
 from app.verify import verify_label
 
 SAMPLES = Path(__file__).resolve().parent.parent / "app" / "static" / "samples"
@@ -104,6 +105,32 @@ def test_reverify_low_confidence_shows_needs_review_banner():
     })
     assert "NEEDS REVIEW" in r.text
     assert "banner-review" in r.text
+
+
+# --- Type-a-label (no image, no OCR) ------------------------------------------
+def test_text_form_renders():
+    html = client.get("/text").text
+    assert 'name="label_text"' in html and 'action="/verify-text"' in html
+
+
+def test_verify_text_pass():
+    label = f"Stone's Throw\nALC 5.0% BY VOL\n{OFFICIAL_GOVERNMENT_WARNING}"
+    r = client.post("/verify-text", data={
+        "label_text": label, "brand": "Stone's Throw", "alcohol_content": "5.0"})
+    assert "PASS &mdash; everything matches" in r.text
+
+
+def test_verify_text_wrong_brand_flags():
+    label = f"Stone's Throw\nALC 5.0% BY VOL\n{OFFICIAL_GOVERNMENT_WARNING}"
+    r = client.post("/verify-text", data={
+        "label_text": label, "brand": "Totally Different Co", "alcohol_content": "5.0"})
+    assert "FLAGGED" in r.text
+
+
+def test_verify_text_empty_is_friendly():
+    r = client.post("/verify-text", data={
+        "label_text": "   ", "brand": "X", "alcohol_content": "5"})
+    assert "Please paste the label text" in r.text
 
 
 # --- Batch verification web flow (U2/U3) --------------------------------------
