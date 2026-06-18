@@ -1,72 +1,64 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TTB Label Verification</title>
-  <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-  <main class="container">
-    <h1>Label Verification</h1>
-    <p class="lead">
-      Upload a label photo and the application details. We check the brand name,
-      alcohol content, and the government warning, then show you a clear result.
-    </p>
-    <p><a class="batch-link" href="/batch">Have a stack to check? Verify a batch &rarr;</a></p>
+{% extends "base.html" %}
+{% block title %}TTB Label Verification{% endblock %}
+{% block content %}
+  <h1>Verify an alcohol label</h1>
+  <p class="lead">
+    Upload a label photo and the application details. We check the brand name,
+    alcohol content, and the government warning, then show you a clear result.
+  </p>
+  <div class="modes">
+    <a class="mode-link" href="/text">⌨ No photo? Paste the label text</a>
+    <a class="mode-link" href="/batch">▦ Verify a batch</a>
+  </div>
 
-    <form class="card" action="/verify" method="post" enctype="multipart/form-data">
-      <div class="field">
-        <span class="field-label">1. Label photo</span>
-        <label class="dropzone" id="dropzone">
-          <input type="file" name="label_image" accept="image/*" required id="fileInput">
-          <span class="dropzone-text">Drag a photo here, or click to choose a file</span>
-          <img class="dropzone-preview" id="preview" alt="Selected label preview" hidden>
-        </label>
-      </div>
+  <form class="card" action="/verify" method="post" enctype="multipart/form-data" style="margin-top:18px">
+    <label class="field">
+      <span class="field-label">1. Label photo</span>
+      <span class="dropzone" id="dropzone">
+        <input type="file" name="label_image" accept="image/*" required id="fileInput">
+        <span class="dropzone-text">Drag a photo here, or click to choose a file</span>
+        <img class="dropzone-preview" id="preview" alt="Selected label preview" hidden>
+      </span>
+    </label>
 
-      <label class="field">
-        <span class="field-label">2. Brand name (from the application)</span>
-        <input type="text" name="brand" placeholder="e.g. Stone's Throw" required>
-      </label>
+    <label class="field">
+      <span class="field-label">2. Brand name (from the application)</span>
+      <input type="text" name="brand" placeholder="e.g. Stone's Throw" required>
+    </label>
 
-      <label class="field">
-        <span class="field-label">3. Alcohol content (ABV %)</span>
-        <input type="text" name="alcohol_content" placeholder="e.g. 5.0" required>
-      </label>
+    <label class="field">
+      <span class="field-label">3. Alcohol content (ABV %)</span>
+      <input type="text" name="alcohol_content" placeholder="e.g. 5.0" required>
+    </label>
 
-      <details class="advanced">
-        <summary>Government warning (already set to the official text)</summary>
-        <p class="hint">
-          The expected warning is pre-filled with the official 27 CFR &sect;16.21
-          text. You normally do not need to change this.
-        </p>
-        <textarea name="expected_warning" rows="5">{{ official_warning }}</textarea>
-      </details>
+    <details class="advanced">
+      <summary>Government warning (already set to the official text)</summary>
+      <p class="hint">
+        The expected warning is pre-filled with the official 27 CFR &sect;16.21
+        text. You normally do not need to change this.
+      </p>
+      <textarea name="expected_warning" rows="5">{{ official_warning }}</textarea>
+    </details>
 
-      <button type="submit" class="btn-primary">Check this label</button>
-    </form>
+    <button type="submit" class="btn-primary">Check this label</button>
+  </form>
 
-    <section class="samples">
-      <h2>Or try a sample label</h2>
-      <div class="sample-grid">
-        {% for s in samples %}
-        <form action="/verify-sample/{{ s.key }}" method="post" class="sample">
-          <img src="/static/samples/{{ s.filename }}" alt="{{ s.title }}">
-          <div class="sample-body">
-            <strong>{{ s.title }}</strong>
-            <span class="sample-blurb">{{ s.blurb }}</span>
-            <button type="submit" class="btn-secondary">Check this sample</button>
-          </div>
-        </form>
-        {% endfor %}
-      </div>
-    </section>
+  <section class="samples">
+    <h2>Or try a sample label</h2>
+    <div class="sample-grid">
+      {% for s in samples %}
+      <form action="/verify-sample/{{ s.key }}" method="post" class="sample">
+        <img src="/static/samples/{{ s.filename }}" alt="{{ s.title }}">
+        <div class="sample-body">
+          <strong>{{ s.title }}</strong>
+          <span class="sample-blurb">{{ s.blurb }}</span>
+          <button type="submit" class="btn-secondary">Check this sample</button>
+        </div>
+      </form>
+      {% endfor %}
+    </div>
+  </section>
 
-    <footer class="foot">
-      Proof of concept. Processing is local; nothing you upload is stored.
-    </footer>
-  </main>
-  <script src="/static/upload.js" defer></script>
-</body>
-</html>
+  <footer class="foot">Proof of concept. Processing is local; nothing you upload is stored.</footer>
+{% endblock %}
+{% block scripts %}<script src="/static/upload.js" defer></script>{% endblock %}

@@ -35,9 +35,45 @@ def index(request: Request):
         request,
         "index.html",
         {
+            "nav": "single",
             "samples": list(SAMPLES.values()),
             "official_warning": OFFICIAL_GOVERNMENT_WARNING,
         },
+    )
+
+
+@app.get("/text", response_class=HTMLResponse)
+def text_form(request: Request):
+    return templates.TemplateResponse(
+        request, "text.html",
+        {"nav": "text", "official_warning": OFFICIAL_GOVERNMENT_WARNING},
+    )
+
+
+@app.post("/verify-text", response_class=HTMLResponse)
+def verify_text(
+    request: Request,
+    label_text: str = Form(...),
+    brand: str = Form(...),
+    alcohol_content: str = Form(...),
+    expected_warning: str = Form(OFFICIAL_GOVERNMENT_WARNING),
+):
+    """Verify typed/pasted label text against the claimed data (no image, no OCR)."""
+    text = label_text.strip()
+    warning = expected_warning or OFFICIAL_GOVERNMENT_WARNING
+    if not ocr.is_readable(text):
+        result = VerificationResult(
+            readable=False,
+            message="Please paste the label text (brand, alcohol content, and the "
+                    "government warning) so we have something to check.",
+        )
+        return _render_result(request, result, brand, alcohol_content)
+    # The typed text IS the label text; run the matchers directly (high confidence).
+    result = reverify_text(text, brand=brand, alcohol_content=alcohol_content,
+                           expected_warning=warning)
+    return _render_result(
+        request, result, brand, alcohol_content,
+        ocr_text=text, expected_warning=warning,
     )
 
 
@@ -138,7 +174,7 @@ def reverify(
 @app.get("/batch", response_class=HTMLResponse)
 def batch_form(request: Request):
     return templates.TemplateResponse(
-        request, "batch.html", {"cap": batch_mod.BATCH_MAX_LABELS}
+        request, "batch.html", {"nav": "batch", "cap": batch_mod.BATCH_MAX_LABELS}
     )
 
 
@@ -159,8 +195,8 @@ async def batch_run(
     return templates.TemplateResponse(
         request,
         "batch_results.html",
-        {"result": result, "results_csv_b64": results_csv_b64,
-         "cap": batch_mod.BATCH_MAX_LABELS},
+        {"nav": "batch", "wide": True, "result": result,
+         "results_csv_b64": results_csv_b64, "cap": batch_mod.BATCH_MAX_LABELS},
     )
 
 

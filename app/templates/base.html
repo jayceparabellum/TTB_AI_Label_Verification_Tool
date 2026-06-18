@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}TTB Label Verification{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="site-header no-print">
+    <a class="wordmark" href="/">
+      <span class="mark">TTB</span>
+      <span class="wordmark-text">Label&nbsp;Verification</span>
+    </a>
+    <nav class="site-nav">
+      <a href="/"{% if nav is defined and nav == 'single' %} class="active"{% endif %}>Single</a>
+      <a href="/text"{% if nav is defined and nav == 'text' %} class="active"{% endif %}>Text</a>
+      <a href="/batch"{% if nav is defined and nav == 'batch' %} class="active"{% endif %}>Batch</a>
+    </nav>
+  </header>
+  <main class="container{% if wide is defined and wide %} container-wide{% endif %}">
+    {% block content %}{% endblock %}
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

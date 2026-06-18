@@ -1,72 +1,63 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Batch results — TTB Label Verification</title>
-  <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-  <main class="container container-wide">
-    <a class="back" href="/batch">&larr; New batch</a>
+{% extends "base.html" %}
+{% block title %}Batch results — TTB Label Verification{% endblock %}
+{% block content %}
+  <a class="back" href="/batch">&larr; New batch</a>
 
-    {% if result.error %}
-      <div class="banner banner-flag"><h1>Couldn't run the batch</h1><p>{{ result.error }}</p></div>
-    {% else %}
-      {%- set s = result.summary -%}
-      <div class="banner {{ 'banner-pass' if s.flagged == 0 and s.needs_review == 0 and s.errors == 0 else 'banner-flag' }}">
-        <h1>{{ s.total }} label(s) checked</h1>
-        <p>
-          <strong>{{ s.passed }}</strong> passed ·
-          <strong>{{ s.flagged }}</strong> flagged ·
-          <strong>{{ s.needs_review }}</strong> need review ·
-          <strong>{{ s.errors }}</strong> error(s)
-        </p>
-      </div>
+  {% if result.error %}
+    <div class="banner banner-flag"><h1>Couldn't run the batch</h1><p>{{ result.error }}</p></div>
+  {% else %}
+    {%- set s = result.summary -%}
+    <div class="banner {{ 'banner-pass' if s.flagged == 0 and s.needs_review == 0 and s.errors == 0 else 'banner-flag' }}">
+      <h1>{{ s.total }} label(s) checked</h1>
+      <p>
+        <strong>{{ s.passed }}</strong> passed ·
+        <strong>{{ s.flagged }}</strong> flagged ·
+        <strong>{{ s.needs_review }}</strong> need review ·
+        <strong>{{ s.errors }}</strong> error(s)
+      </p>
+    </div>
 
-      <div class="batch-controls">
-        <label class="filter-toggle">
-          <input type="checkbox" id="attnFilter"> Show only rows needing attention
-        </label>
-        {% if results_csv_b64 %}
-        <a class="btn-secondary" download="batch-results.csv"
-           href="data:text/csv;base64,{{ results_csv_b64 }}">Download results CSV</a>
-        {% endif %}
-      </div>
+    <div class="batch-controls">
+      <label class="filter-toggle">
+        <input type="checkbox" id="attnFilter"> Show only rows needing attention
+      </label>
+      {% if results_csv_b64 %}
+      <a class="btn-secondary" download="batch-results.csv"
+         href="data:text/csv;base64,{{ results_csv_b64 }}">Download results CSV</a>
+      {% endif %}
+    </div>
 
-      {%- set labels = {
-        'pass': ('PASS', 'pass'), 'flag': ('FLAG', 'flag'),
-        'needs_review': ('NEEDS REVIEW', 'review'),
-        'unreadable': ("COULDN'T READ", 'err'),
-        'no_application_data': ('NO CSV ROW', 'err'),
-        'no_image': ('NO IMAGE', 'err'),
-        'duplicate_application_data': ('DUPLICATE IN CSV', 'err'),
-      } -%}
-      <table class="batch-table" id="batchTable">
-        <thead>
-          <tr><th>File</th><th>Brand</th><th>Alcohol</th><th>Warning</th><th>Result</th></tr>
-        </thead>
-        <tbody>
-          {% for row in result.rows %}
-          {%- set verdicts = {} -%}
-          {%- for f in row.fields -%}{%- set _ = verdicts.update({f.field: f.passed}) -%}{%- endfor -%}
-          <tr class="{{ 'attn' if row.needs_attention else 'ok' }}">
-            <td class="fn">{{ row.filename }}</td>
-            {% for key in ['brand', 'alcohol_content', 'government_warning'] %}
-              {% if key in verdicts %}
-                <td><span class="cell-badge {{ 'pass' if verdicts[key] else 'flag' }}">{{ 'PASS' if verdicts[key] else 'FLAG' }}</span></td>
-              {% else %}
-                <td class="muted">&mdash;</td>
-              {% endif %}
-            {% endfor %}
-            {%- set lbl = labels.get(row.status, (row.status, 'err')) -%}
-            <td><span class="cell-badge {{ lbl[1] }}" title="{{ row.message }}">{{ lbl[0] }}</span></td>
-          </tr>
+    {%- set labels = {
+      'pass': ('PASS', 'pass'), 'flag': ('FLAG', 'flag'),
+      'needs_review': ('NEEDS REVIEW', 'review'),
+      'unreadable': ("COULDN'T READ", 'err'),
+      'no_application_data': ('NO CSV ROW', 'err'),
+      'no_image': ('NO IMAGE', 'err'),
+      'duplicate_application_data': ('DUPLICATE IN CSV', 'err'),
+    } -%}
+    <table class="batch-table" id="batchTable">
+      <thead>
+        <tr><th>File</th><th>Brand</th><th>Alcohol</th><th>Warning</th><th>Result</th></tr>
+      </thead>
+      <tbody>
+        {% for row in result.rows %}
+        {%- set verdicts = {} -%}
+        {%- for f in row.fields -%}{%- set _ = verdicts.update({f.field: f.passed}) -%}{%- endfor -%}
+        <tr class="{{ 'attn' if row.needs_attention else 'ok' }}">
+          <td class="fn">{{ row.filename }}</td>
+          {% for key in ['brand', 'alcohol_content', 'government_warning'] %}
+            {% if key in verdicts %}
+              <td><span class="cell-badge {{ 'pass' if verdicts[key] else 'flag' }}">{{ 'PASS' if verdicts[key] else 'FLAG' }}</span></td>
+            {% else %}
+              <td class="muted">&mdash;</td>
+            {% endif %}
           {% endfor %}
-        </tbody>
-      </table>
-    {% endif %}
-  </main>
-  <script src="/static/batch.js" defer></script>
-</body>
-</html>
+          {%- set lbl = labels.get(row.status, (row.status, 'err')) -%}
+          <td><span class="cell-badge {{ lbl[1] }}" title="{{ row.message }}">{{ lbl[0] }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}
+{% block scripts %}<script src="/static/batch.js" defer></script>{% endblock %}

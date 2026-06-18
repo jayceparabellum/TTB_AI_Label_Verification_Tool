@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Type a label — TTB Label Verification{% endblock %}
+{% block content %}
+  <h1>Type the label text</h1>
+  <p class="lead">
+    No photo? Paste or type what the label says &mdash; the brand, the alcohol
+    content, and the government warning &mdash; and we'll verify it against the
+    application. Same checks, no image needed.
+  </p>
+
+  <form class="card" action="/verify-text" method="post" style="margin-top:18px">
+    <label class="field">
+      <span class="field-label">1. Label text</span>
+      <textarea name="label_text" class="mono" rows="8" required
+        placeholder="Paste exactly what the label says, e.g.&#10;Stone's Throw&#10;ALC 5.0% BY VOL&#10;GOVERNMENT WARNING: (1) According to the Surgeon General..."></textarea>
+    </label>
+
+    <label class="field">
+      <span class="field-label">2. Brand name (from the application)</span>
+      <input type="text" name="brand" placeholder="e.g. Stone's Throw" required>
+    </label>
+
+    <label class="field">
+      <span class="field-label">3. Alcohol content (ABV %)</span>
+      <input type="text" name="alcohol_content" placeholder="e.g. 5.0" required>
+    </label>
+
+    <details class="advanced">
+      <summary>Government warning (already set to the official text)</summary>
+      <p class="hint">The expected warning is pre-filled with the official
+        27 CFR &sect;16.21 text. You normally do not need to change this.</p>
+      <textarea name="expected_warning" rows="5">{{ official_warning }}</textarea>
+    </details>
+
+    <button type="submit" class="btn-primary">Check this text</button>
+  </form>
+
+  <footer class="foot">Proof of concept. Processing is local; nothing you enter is stored.</footer>
+{% endblock %}
