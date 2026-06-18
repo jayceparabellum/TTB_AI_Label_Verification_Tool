@@ -56,6 +56,22 @@ No root for the Tesseract install? You can extract the `.deb` into a local prefi
 and point the app at it — `app/ocr.py` auto-detects a Tesseract under
 `~/.local/tess` when none is on `PATH`.
 
+The four steps above are **all you need** for the full verifier, the batch UI, the
+pop-out assistant, and BM25 regulatory lookup. Two layers are **optional** and
+turn on only when their dependency is present (otherwise they degrade gracefully):
+
+```bash
+# (optional) the conversational LLM — a local Ollama 3B model
+bash scripts/setup_ollama.sh                 # pulls llama3.2:3b; chat works once it's up
+# (optional) dense RAG retrieval — BGE-small embeddings (else BM25-only)
+pip install sentence-transformers            # then RAG_DENSE=auto enables it
+
+# run the tests + the evaluations
+pytest                                        # 155 tests
+python eval/run_eval.py                       # verifier decision board -> eval/REPORT.md
+python eval/run_rag_eval.py                   # RAG hit-rate / faithfulness / citation
+```
+
 ---
 
 ## Tests and evaluation
@@ -223,6 +239,38 @@ The volume persists the append-only audit log and session checkpoints across
 restarts. RAG retrieval is BM25-only by default; the dense BGE-small/Chroma
 backend is host-deferred (uncomment the `pip install` in `Dockerfile.agent`).
 Everything stays local — no outbound calls at request time.
+
+---
+
+## Assumptions
+
+The build rests on these explicit assumptions — they shape what the tool does and
+does not do:
+
+- **Input is a submitted label image**, not a shelf photo of a bottle. The product's
+  input is the legible, roughly flat label an agent files with a COLA application;
+  glare/reflection-heavy bottle photography is a documented stress set, not the target.
+- **Three fields are the compliance-critical subset.** Brand, alcohol content, and the
+  §16.21 government warning are adjudicated; class/type, net contents, producer, and
+  country are surfaced best-effort and clearly marked "not adjudicated."
+- **Local Tesseract is a hard constraint** (the deployment blocks outbound ML/cloud
+  calls), so OCR quality is Tesseract's; an unreadable field **safely defers** to a
+  human rather than guessing.
+- **The official §16.21 text is the expected warning by default**, so an agent never
+  types it; only whitespace/line-wrap differences are tolerated, casing/wording are not.
+- **Runtime is fully offline.** Models and the regulatory corpus are provisioned at
+  build time; nothing leaves the network when a request is served.
+- **The regulatory corpus is a curated, citation-verified excerpt** of 27 CFR
+  (Parts 4/5/7/16) — section numbers verified against live eCFR (2026-06-10), chunk
+  wording a faithful summary — not a full live eCFR ingest.
+- **The LLM and RAG never adjudicate.** The deterministic core owns every pass/fail; a
+  human approves every write; the agent can never auto-submit a compliance approval.
+- **POC boundaries.** No COLA/government-system integration, no auth, no real PII;
+  verify is stateless. The audit log + chat checkpoints are local SQLite (ephemeral on
+  the free host).
+- **Benchmark user is the least tech-comfortable reviewer** — hence large targets
+  (≥44px), one obvious action per screen, and a button path that always works even when
+  the assistant or a model is unavailable.
 
 ---
 
