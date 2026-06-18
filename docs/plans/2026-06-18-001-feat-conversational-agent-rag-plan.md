@@ -1,6 +1,6 @@
 ---
 title: "feat: Conversational LangGraph agent + local RAG over the verification core"
-status: active
+status: completed
 date: 2026-06-18
 depth: deep
 branch: feat/conversational-agent
