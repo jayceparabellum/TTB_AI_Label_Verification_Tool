@@ -6,28 +6,28 @@ The board scores the system on its **intended input** — the label image an age
 
 | case | kind | brand | abv | warning | outcome | ms |
 |------|------|-------|-----|---------|---------|----|
-| clean_pass | clean | ok | ok | ok | ✅ correct | 180 |
-| abv_mismatch | clean | ok | ok | ok | ✅ correct | 179 |
-| bad_warning | clean | ok | ok | ok | ✅ correct | 178 |
-| degraded_rotate | degraded | ok | ok | ok | ✅ correct | 186 |
-| degraded_rotate_heavy | degraded | ok | ok | ok | ✅ correct | 195 |
-| degraded_blur | degraded | ok | ok | ok | ✅ correct | 171 |
-| degraded_jpeg | degraded | ok | ok | ok | ✅ correct | 182 |
-| degraded_lowcontrast | degraded | ok | ok | ok | ✅ correct | 177 |
-| degraded_perspective | degraded | ok | ok | ok | ✅ correct | 173 |
-| degraded_glare | degraded | ok | ok | ok | ✅ correct | 186 |
-| degraded_shadow | degraded | ok | ok | ok | ✅ correct | 192 |
-| degraded_noise | degraded | ok | ok | ok | ✅ correct | 202 |
-| degraded_blur_rotate | degraded | ok | ok | ok | ✅ correct | 181 |
-| label_ironwood | label | ok | ok | ok | ✅ correct | 173 |
-| label_harbor_light | label | ok | ok | ok | ✅ correct | 170 |
-| label_redwood_trail | label | ok | ok | ok | ✅ correct | 178 |
+| clean_pass | clean | ok | ok | ok | ✅ correct | 276 |
+| abv_mismatch | clean | ok | ok | ok | ✅ correct | 280 |
+| bad_warning | clean | ok | ok | ok | ✅ correct | 313 |
+| degraded_rotate | degraded | ok | ok | ok | ✅ correct | 310 |
+| degraded_rotate_heavy | degraded | ok | ok | ok | ✅ correct | 314 |
+| degraded_blur | degraded | ok | ok | ok | ✅ correct | 269 |
+| degraded_jpeg | degraded | ok | ok | ok | ✅ correct | 327 |
+| degraded_lowcontrast | degraded | ok | ok | ok | ✅ correct | 281 |
+| degraded_perspective | degraded | ok | ok | ok | ✅ correct | 265 |
+| degraded_glare | degraded | ok | ok | ok | ✅ correct | 295 |
+| degraded_shadow | degraded | ok | ok | ok | ✅ correct | 302 |
+| degraded_noise | degraded | ok | ok | ok | ✅ correct | 357 |
+| degraded_blur_rotate | degraded | ok | ok | ok | ✅ correct | 310 |
+| label_ironwood | label | ok | ok | ok | ✅ correct | 279 |
+| label_harbor_light | label | ok | ok | ok | ✅ correct | 297 |
+| label_redwood_trail | label | ok | ok | ok | ✅ correct | 283 |
 
 - **Decision correctness:** 16/16 = **100.0%** — every case handled with **zero wrong verdicts** (16 confident-correct).
 - **Confident coverage:** 16/16 = **100.0%** committed a verdict.
 - **Margin of error (wrong ÷ confident verdicts):** 0/16 = **0.00%**  → **PASS** (< 1%)
 - **Logic-on-clean accuracy:** 9/9 = **100.0%** (decision logic on clean reads)
-- **Max latency:** 202 ms (budget 5000 ms) -> PASS
+- **Max latency:** 357 ms (budget 5000 ms) -> PASS
 
 _Preprocessing (deskew + CLAHE contrast) lifts confident-correct verdicts on the synthetic set from 9/13 (OFF) to 13/13 (ON)._
 
@@ -37,8 +37,8 @@ Arbitrary phone photos of bottles on a shelf — glare, reflections, dark backgr
 
 | case | kind | brand | abv | warning | outcome | ms |
 |------|------|-------|-----|---------|---------|----|
-| ciroc | stress | unreadable | unreadable | unreadable | ✅ safe-defer | 189 |
-| grey_goose | stress | unreadable | unreadable | unreadable | ✅ safe-defer | 263 |
-| jack_daniels | stress | unreadable | unreadable | unreadable | ✅ safe-defer | 344 |
+| ciroc | stress | unreadable | unreadable | unreadable | ✅ safe-defer | 311 |
+| grey_goose | stress | unreadable | unreadable | unreadable | ✅ safe-defer | 436 |
+| jack_daniels | stress | unreadable | unreadable | unreadable | ✅ safe-defer | 533 |
 
 _3/3 correctly **safe-defer** to human review and **zero produce a wrong verdict** — exactly the safe behaviour we want on unreadable input. Local Tesseract (a hard requirement) can't read these; the system declines to guess rather than mis-flagging a compliant label._
