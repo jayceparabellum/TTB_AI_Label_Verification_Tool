@@ -1,11 +1,10 @@
-# Real photo of a Jack Daniel's Old No. 7 bottle (1335x1800, higher-res).
+# Real photo of a Jack Daniel's Old No. 7 bottle (1335x1800).
 # Source: Open Food Facts product 5099873089798 — https://world.openfoodfacts.org
 # License: CC-BY-SA 3.0, Open Food Facts contributors.
-# At this resolution OCR reads the brand and 40% ABV correctly, but the overall
-# read confidence (~43%) stays below the commit threshold, so the system DEFERS
-# to human review rather than committing. (The earlier lower-res photo couldn't
-# read the stylized brand at all.)
+# A dark bottle with a black reflective label: under the illumination-normalized
+# pipeline (CLAHE+deskew) it OCRs at low confidence, so the system DEFERS to human
+# review rather than committing.
 # Format: brand|abv|exp_brand,exp_alcohol,exp_warning
-# TRUE verdict from the photo: brand and 40% ABV are legible (pass); no US
-# 27 CFR 16.21 warning is present/legible on this bottle (flag).
+# TRUE verdict from the photo: brand and 40% ABV are legible to a human (pass); no
+# US 27 CFR 16.21 warning is present/legible on this bottle (flag).
 Jack Daniel's|40|pass,pass,flag

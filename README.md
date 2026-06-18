@@ -72,13 +72,13 @@ correct moves per case: it **commits a verdict** when it can read the label, or 
 photos):
 
 - **Decision correctness — 16/16 = 100%** — every case handled with **zero wrong
-  verdicts** (11 confident-correct + 5 safe deferrals).
-- **Margin of error — 0.00%** (0 wrong of 11 confident verdicts). **Meets the < 1% goal.**
+  verdicts** (12 confident-correct + 4 safe deferrals).
+- **Margin of error — 0.00%** (0 wrong of 12 confident verdicts). **Meets the < 1% goal.**
 - **Logic-on-clean accuracy — 100%** (9/9 field decisions on cleanly-read text).
-- **Coverage — 11/16 committed confidently; 5/16 safely deferred to human review**
-  (two degraded photos whose warning region didn't OCR, plus three real bottle
+- **Coverage — 12/16 committed confidently; 4/16 safely deferred to human review**
+  (one degraded photo whose warning region didn't OCR, plus three real bottle
   photos). A deferral never false-passes or false-flags.
-- **Max latency — ~430 ms** (budget 5000 ms), well under the bar.
+- **Max latency — ~580 ms** (budget 5000 ms), well under the bar.
 
 Per-case outcomes on the degraded set (a ✗ cell is an OCR misread; the *outcome*
 is the — always correct — decision the system made about it):
@@ -92,26 +92,28 @@ is the — always correct — decision the system made about it):
 | Low contrast                  |   ✓   |  ✓  |    ✓    | ✅ correct |
 | Perspective / keystone        |   ✓   |  ✓  |    ✓    | ✅ correct |
 | Glare / overexposure          |   ✓   |  ✓  |    ✓    | ✅ correct |
-| Shadow / uneven lighting      |   ✗   |  ✓  |    ✗    | ✅ safe-defer |
+| Shadow / uneven lighting      |   ✓   |  ✓  |    ✓    | ✅ correct |
 | Sensor noise                  |   ✓   |  ✓  |    ✓    | ✅ correct |
 | Blur + rotation (compound)    |   ✓   |  ✓  |    ✓    | ✅ correct |
 
-**8/10 degraded photos get a confident-correct verdict; 2 safely defer.** Two
-design choices make this honest rather than lucky: (1) the warning check is
+**9/10 degraded photos get a confident-correct verdict; 1 safely defers.** Two
+preprocessing steps and two matcher choices make this honest rather than lucky:
+(1) **deskew** straightens rotated labels and **CLAHE contrast** normalizes uneven
+lighting — together they recover the rotation *and* shadow cases (CLAHE brings back
+a brand whose start was lost to a left-side shadow); (2) the warning check is
 **strict on wording/casing but tolerant of OCR noise** — it fuzzy-matches the
-§16.21 body (compliant reads score ≥ 99.6%) instead of demanding all 283
-characters verbatim, so a one-character OCR slip no longer false-FLAGs a compliant
-label; (2) when the warning region **didn't OCR at all** (jpeg, shadow), the
-system **defers to NEEDS REVIEW** instead of confidently flagging a possibly-
-compliant label as non-compliant. An OpenCV deskew stage lifts confident-correct
-verdicts from 9/13 to 11/13 (ablation-tuned in `eval/ablate.py`).
+§16.21 body (compliant reads score ≥ 99.6%) instead of demanding all 283 characters
+verbatim, so a one-character OCR slip no longer false-FLAGs a compliant label; and
+when the warning region **didn't OCR at all** (the jpeg case), the system **defers
+to NEEDS REVIEW** instead of confidently flagging a possibly-compliant label. The
+two preprocessing steps lift confident-correct verdicts from 9/13 to 12/13
+(eval-tuned; `eval/ablate.py`).
 
 The set includes three **real bottle photos** (in `eval/images/real/`): a Jack
-Daniel's Old No. 7 (at higher resolution OCR reads the brand *and* `40%` ABV
-correctly, but overall confidence stays under the commit threshold), and a Cîroc
-and a Grey Goose vodka (frosted-glass labels with thin reflective text that OCR
-poorly). All three correctly **route to human review** rather than guessing — the
-measured real-world gap, surfaced as *coverage*, not hidden in the error rate.
+Daniel's Old No. 7, a Cîroc, and a Grey Goose vodka — dark and/or frosted-glass
+bottles with reflective labels that OCR poorly (~30–45% confidence). All three
+correctly **route to human review** rather than guessing — the measured real-world
+gap, surfaced as *coverage*, not hidden in the error rate.
 Drop more photos into `eval/images/real/` with a
 `brand|abv|exp_brand,exp_alcohol,exp_warning` sidecar to extend the set.
 
