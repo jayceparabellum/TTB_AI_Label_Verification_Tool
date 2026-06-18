@@ -40,6 +40,8 @@ def _make_degraded() -> list[EvalCase]:
         img = base
         if mode == "rotate":
             img = base.rotate(5, expand=True, fillcolor="white")
+        elif mode == "rotate_heavy":
+            img = base.rotate(8, expand=True, fillcolor="white")
         elif mode == "blur":
             img = base.filter(ImageFilter.GaussianBlur(1.4))
         elif mode == "jpeg":
@@ -88,54 +90,69 @@ def _run(case: EvalCase):
             "exp": (case.exp_brand, case.exp_alcohol, case.exp_warning)}
 
 
-def main() -> None:
-    _ensure_samples()
-    cases = CLEAN_CASES + _make_degraded() + _real_cases()
-
-    lines = ["# Evaluation Report", ""]
-    lines.append("| case | kind | brand | abv | warning | correct | ms |")
-    lines.append("|------|------|-------|-----|---------|---------|----|")
-
-    clean_fields_correct = clean_fields_total = 0
-    e2e_correct = e2e_total = 0
+def _score(cases: list[EvalCase]) -> dict:
+    """Run every case at the current preprocessing setting; collect the tallies."""
+    clean_c = clean_t = e2e_c = e2e_t = 0
     max_ms = 0
-    fields = ("brand", "alcohol", "warning")
-
+    rows = []
     for c in cases:
         res = _run(c)
         max_ms = max(max_ms, res["ms"])
         if not res["readable"]:
-            cells = ["unreadable"] * 3
-            case_ok = False
+            cells, case_ok = ["unreadable"] * 3, False
         else:
-            cells = []
-            case_ok = True
+            cells, case_ok = [], True
             for i in range(3):
                 ok = res["got"][i] == res["exp"][i]
                 case_ok = case_ok and ok
                 cells.append("ok" if ok else f"WRONG(got {res['got'][i]})")
                 if c.kind == "clean":
-                    clean_fields_total += 1
-                    clean_fields_correct += int(ok)
-        e2e_total += 1
-        e2e_correct += int(case_ok)
-        lines.append(f"| {c.name} | {c.kind} | {cells[0]} | {cells[1]} | {cells[2]} "
-                     f"| {'PASS' if case_ok else 'MISS'} | {res['ms']} |")
+                    clean_t += 1
+                    clean_c += int(ok)
+        e2e_t += 1
+        e2e_c += int(case_ok)
+        rows.append((c, cells, case_ok, res["ms"]))
+    return {"clean_c": clean_c, "clean_t": clean_t, "e2e_c": e2e_c,
+            "e2e_t": e2e_t, "max_ms": max_ms, "rows": rows}
 
-    logic_acc = 100.0 * clean_fields_correct / max(clean_fields_total, 1)
-    e2e_acc = 100.0 * e2e_correct / max(e2e_total, 1)
+
+def main() -> None:
+    _ensure_samples()
+    cases = CLEAN_CASES + _make_degraded() + _real_cases()
+
+    from app import ocr  # toggle preprocessing for the before/after (U4)
+
+    ocr.PREPROCESS_ENABLED = False
+    off = _score(cases)
+    ocr.PREPROCESS_ENABLED = True
+    on = _score(cases)
+
+    def pct(c, t):
+        return 100.0 * c / max(t, 1)
+
+    lines = ["# Evaluation Report", "",
+             "Preprocessing OFF vs ON (OpenCV: denoise/contrast/deskew/binarize).", "",
+             "| case | kind | brand | abv | warning | correct | ms |",
+             "|------|------|-------|-----|---------|---------|----|"]
+    for c, cells, case_ok, ms in on["rows"]:        # detailed table = ON run
+        lines.append(f"| {c.name} | {c.kind} | {cells[0]} | {cells[1]} | {cells[2]} "
+                     f"| {'PASS' if case_ok else 'MISS'} | {ms} |")
+
+    e2e_off, e2e_on = pct(off["e2e_c"], off["e2e_t"]), pct(on["e2e_c"], on["e2e_t"])
     lines += [
         "",
-        f"- **Logic-on-clean accuracy:** {clean_fields_correct}/{clean_fields_total} "
-        f"field decisions correct = **{logic_acc:.1f}%**",
-        f"- **End-to-end accuracy:** {e2e_correct}/{e2e_total} cases fully correct "
-        f"= **{e2e_acc:.1f}%** (includes degraded/real photos)",
-        f"- **Max latency:** {max_ms} ms (budget: 5000 ms) "
-        f"-> {'PASS' if max_ms < 5000 else 'FAIL'}",
+        f"- **Logic-on-clean accuracy (ON):** {on['clean_c']}/{on['clean_t']} "
+        f"= **{pct(on['clean_c'], on['clean_t']):.1f}%** (must stay 100%)",
+        f"- **End-to-end accuracy:** preprocessing OFF "
+        f"{off['e2e_c']}/{off['e2e_t']} = **{e2e_off:.1f}%**  →  ON "
+        f"{on['e2e_c']}/{on['e2e_t']} = **{e2e_on:.1f}%**  "
+        f"(delta {e2e_on - e2e_off:+.1f} pts)",
+        f"- **Max latency (ON):** {on['max_ms']} ms (budget: 5000 ms) "
+        f"-> {'PASS' if on['max_ms'] < 5000 else 'FAIL'}",
         "",
-        "_End-to-end accuracy is lower by design: strict warning matching is "
-        "intentionally unforgiving, so heavily degraded photos can miss the warning. "
-        "That is the documented limitation, measured rather than hidden._",
+        "_End-to-end < 100% by design: strict warning matching is intentionally "
+        "unforgiving, so the most degraded photos can still miss the warning even "
+        "after preprocessing. Measured, not hidden._",
     ]
 
     report = "\n".join(lines)

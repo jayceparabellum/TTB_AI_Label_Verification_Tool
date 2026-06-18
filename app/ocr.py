@@ -13,8 +13,15 @@ import re
 import shutil
 from pathlib import Path
 
+import numpy as np
 import pytesseract
 from PIL import Image, ImageOps, UnidentifiedImageError
+
+from . import preprocess as _preprocess
+
+# Master switch for the OpenCV preprocessing stage (per-step toggles live in
+# app/preprocess.py). On by default; flip to False to OCR the raw grayscale.
+PREPROCESS_ENABLED = True
 
 
 class OcrReadError(Exception):
@@ -139,13 +146,28 @@ def extract_text_data(image_bytes: bytes) -> tuple[str, float]:
     _ensure_configured()
     try:
         img = _prepare(image_bytes)
+        ocr_input = _maybe_preprocess(img)
         data = pytesseract.image_to_data(
-            img, config=_TESS_CONFIG, output_type=pytesseract.Output.DICT
+            ocr_input, config=_TESS_CONFIG, output_type=pytesseract.Output.DICT
         )
     except (UnidentifiedImageError, OSError, ValueError,
             Image.DecompressionBombError, pytesseract.pytesseract.TesseractError) as exc:
         raise OcrReadError(str(exc)) from exc
     return _reconstruct(data)
+
+
+def _maybe_preprocess(img: Image.Image):
+    """Run OpenCV preprocessing on the grayscale image when enabled.
+
+    Best-effort: preprocessing is an accuracy enhancement, not a hard step, so any
+    OpenCV failure falls back to the raw grayscale rather than failing the OCR.
+    """
+    if not PREPROCESS_ENABLED:
+        return img
+    try:
+        return _preprocess.preprocess(np.asarray(img))
+    except Exception:
+        return img
 
 
 def extract_text(image_bytes: bytes) -> str:

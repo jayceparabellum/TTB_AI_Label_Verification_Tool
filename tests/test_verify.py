@@ -102,6 +102,23 @@ def test_low_confidence_image_needs_review():
     assert r.overall_pass is False        # needs_review supersedes PASS
 
 
+def test_preprocessing_on_keeps_clean_verdicts_no_spurious_review():
+    # Regression guard (U3): with OpenCV preprocessing on (default), a clean label
+    # still passes all fields and is not pushed below the needs-review threshold.
+    r = _verify("clean_pass.png")
+    assert r.overall_pass is True
+    assert r.needs_review is False
+    assert r.confidence > 55
+
+
+def test_preprocessing_toggle_off_still_verifies(monkeypatch):
+    from app import ocr
+
+    monkeypatch.setattr(ocr, "PREPROCESS_ENABLED", False)
+    r = _verify("clean_pass.png")
+    assert r.overall_pass is True        # master toggle off path works
+
+
 def test_latency_under_5s_on_each_sample():
     for name in ("clean_pass.png", "abv_mismatch.png", "bad_warning.png"):
         r = _verify(name)
