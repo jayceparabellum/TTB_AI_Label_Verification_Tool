@@ -1,0 +1,9 @@
+# Real phone photo of a Grey Goose Original vodka bottle (1200x1600).
+# Source: Open Food Facts product 0080480280017 — https://world.openfoodfacts.org
+# License: CC-BY-SA 3.0, Open Food Facts contributors.
+# Frosted-glass bottle, thin blue text + glare: OCRs at ~38% confidence, so the
+# system DEFERS to NEEDS REVIEW rather than guessing.
+# Format: brand|abv|exp_brand,exp_alcohol,exp_warning
+# TRUE verdict from the photo: brand and 40% ABV are legible to a human (pass);
+# no US 27 CFR 16.21 warning is present/legible on this imported bottle (flag).
+Grey Goose|40|pass,pass,flag
