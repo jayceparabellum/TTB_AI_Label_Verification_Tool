@@ -69,6 +69,24 @@ def test_total_size_guard():
         extract_images_from_zip(z, max_total_bytes=len(PNG))   # one image's worth only
 
 
+def test_windows_backslash_paths_yield_clean_basenames():
+    # Some archivers store Windows-style separators; basename must still match.
+    bs = chr(92)  # a single backslash, unambiguously
+    z = _zip({f"photos{bs}front{bs}label.png": PNG})
+    out = extract_images_from_zip(z)
+    assert [n for n, _ in out] == ["label.png"]
+
+
+def test_duplicate_basenames_both_extracted_documented_behavior():
+    # Two images with the same leaf name in different folders both come through
+    # (accepted edge per the plan's Risk note — run_batch matches both to the same
+    # CSV row). Pinned here so the behavior is intentional, not accidental.
+    z = _zip({"front/label.png": PNG, "back/label.png": PNG + b"different"})
+    out = extract_images_from_zip(z)
+    assert [n for n, _ in out] == ["label.png", "label.png"]
+    assert {b for _, b in out} == {PNG, PNG + b"different"}   # both distinct images kept
+
+
 def test_nested_zip_entry_is_skipped_as_non_image():
     inner = _zip({"x.png": PNG})
     z = _zip({"keep.png": PNG, "inner.zip": inner})

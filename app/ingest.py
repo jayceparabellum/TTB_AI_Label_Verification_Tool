@@ -32,7 +32,10 @@ class ZipIngestError(Exception):
 
 
 def _basename(name: str) -> str:
-    return name.rsplit("/", 1)[-1]
+    # Normalize Windows-style separators — some archivers store backslash paths,
+    # which Python's zipfile leaves intact; otherwise the basename wouldn't match
+    # the CSV row and the image would be flagged "no application data".
+    return name.replace("\\", "/").rsplit("/", 1)[-1]
 
 
 def _is_image_member(info: zipfile.ZipInfo) -> bool:
