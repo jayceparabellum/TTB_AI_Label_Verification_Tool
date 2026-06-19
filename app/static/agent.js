@@ -27,6 +27,17 @@
     return el;
   }
 
+  // Batch results-CSV download button (rendered live; not persisted).
+  function renderDownload(dl) {
+    const a = document.createElement("a");
+    a.className = "btn-secondary chat-download";
+    a.textContent = "⬇ Download " + (dl.filename || "results.csv");
+    a.download = dl.filename || "batch_results.csv";
+    a.href = "data:text/csv;base64," + dl.b64;
+    log.appendChild(a);
+    log.scrollTop = log.scrollHeight;
+  }
+
   function confirmCard(summary) {
     const card = document.createElement("div");
     card.className = "msg msg-confirm";
@@ -62,7 +73,10 @@
         let evt;
         try { evt = JSON.parse(line); } catch (e) { continue; }
         if (evt.type === "tool_call") bubble("tool", "🔧 calling " + evt.tool + "…");
-        else if (evt.type === "tool_step") bubble("tool", "🔧 " + evt.tool + " → " + evt.result);
+        else if (evt.type === "tool_step") {
+          bubble("tool", "🔧 " + evt.tool + " → " + evt.result);
+          if (evt.download && evt.download.b64) renderDownload(evt.download);
+        }
         else if (evt.type === "message") bubble("assistant", evt.text);
         else if (evt.type === "error") bubble("error", evt.text);
         else if (evt.type === "confirm") confirmCard(evt.summary);
@@ -120,6 +134,9 @@
         if (it.kind === "image") {
           attached = { id: it.id, name: it.name }; renderAttachment();
           bubble("tool", "🖼 Attached " + it.name + " — tell me the brand and ABV to verify it.");
+        } else if (it.kind === "csv") {
+          bubble("tool", "📎 " + it.name + " (" + it.rows + " row" + (it.rows === 1 ? "" : "s") +
+                         ") staged — drop the matching images, then say “verify all of these”.");
         } else if (it.kind === "rejected") {
           bubble("error", it.name + ": " + it.reason);
         }

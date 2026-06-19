@@ -9,6 +9,7 @@ RAG tools arrive in later units.
 
 from __future__ import annotations
 
+import base64
 from typing import Annotated
 
 from langchain_core.tools import tool
@@ -21,7 +22,7 @@ from app.samples import SAMPLES as _SAMPLES
 from app.verify import reverify_text as _core_reverify_text
 from app.verify import verify_label as _core_verify_label
 from . import audit
-from .images import STORE
+from .images import STAGING, STORE
 
 _UNREADABLE = "No label image is loaded — please upload one first."
 _UNREADABLE_TEXT = "No label text to verify — please paste the label text first."
@@ -242,19 +243,40 @@ def explain_flag(field: str, failure_reason: str) -> dict:
     return generate.explain_flag(field, failure_reason)
 
 
-@tool
-def batch_verify() -> dict:
-    """Verify all loaded sample labels at once and summarize the results. Expensive
-    action — human-gated. Afterwards, call list_flagged to see only the problems."""
-    global LAST_BATCH
-    uploaded = [(s.filename, s.path.read_bytes()) for s in _SAMPLES.values()]
+def _samples_batch() -> tuple[list, bytes]:
+    """The bundled-sample batch — the demo fallback when nothing was uploaded."""
+    images = [(s.filename, s.path.read_bytes()) for s in _SAMPLES.values()]
     csv = "filename,brand,alcohol_content\n" + "\n".join(
         f"{s.filename},{s.brand},{s.alcohol_content}" for s in _SAMPLES.values())
-    LAST_BATCH = _batch.run_batch(uploaded, csv.encode())
+    return images, csv.encode()
+
+
+@tool
+def batch_verify(state: Annotated[dict, InjectedState]) -> dict:
+    """Verify a whole batch of labels at once and summarize the results. Runs over
+    the CSV + images the user uploaded in THIS chat if they staged one; otherwise
+    over the bundled sample labels. Expensive action — human-gated. Afterwards, call
+    list_flagged to see only the problems. The CSV/images come from the session (you
+    do not supply them)."""
+    global LAST_BATCH
+    staged = STAGING.get_batch(state.get("thread_id")) if state.get("thread_id") else None
+    if staged:
+        images, csv, source = staged["images"], staged["csv"], "uploaded"
+    else:
+        images, csv = _samples_batch()
+        source = "samples"
+
+    LAST_BATCH = _batch.run_batch(images, csv)
+    if LAST_BATCH.error:
+        # Over-cap, empty/malformed CSV, etc. — surface the core's message, no verdict.
+        return {"error": LAST_BATCH.error, "source": source}
     s = LAST_BATCH.summary
-    return {"total": s.get("total", 0), "passed": s.get("passed", 0),
+    return {"source": source,
+            "total": s.get("total", 0), "passed": s.get("passed", 0),
             "flagged": s.get("flagged", 0), "needs_review": s.get("needs_review", 0),
-            "errors": s.get("errors", 0)}
+            "errors": s.get("errors", 0),
+            "results_csv_b64": base64.b64encode(
+                _batch.results_to_csv(LAST_BATCH).encode()).decode()}
 
 
 _KNOWN_WINE_TYPES = {

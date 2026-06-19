@@ -72,6 +72,18 @@
     no.addEventListener("click", function () { card.remove(); dropConfirm(); resume("cancel"); });
   }
 
+  // A batch results-CSV download button (rendered live; the blob is not persisted
+  // to the transcript to keep sessionStorage small — re-run the batch to regenerate).
+  function renderDownload(dl) {
+    const a = document.createElement("a");
+    a.className = "btn-secondary cw-download";
+    a.textContent = "⬇ Download " + (dl.filename || "results.csv");
+    a.download = dl.filename || "batch_results.csv";
+    a.href = "data:text/csv;base64," + dl.b64;
+    log.appendChild(a);
+    log.scrollTop = log.scrollHeight;
+  }
+
   function pushMsg(kind, text) {
     messages.push({ kind: kind, text: text }); saveLog();
     if (kind === "confirm") renderConfirm(text); else renderBubble(kind, text);
@@ -115,6 +127,9 @@
         if (it.kind === "image") {
           attached = { id: it.id, name: it.name }; saveAttach(); renderAttachment();
           pushMsg("tool", "🖼 Attached " + it.name + " — tell me the brand and ABV to verify it.");
+        } else if (it.kind === "csv") {
+          pushMsg("tool", "📎 " + it.name + " (" + it.rows + " row" + (it.rows === 1 ? "" : "s") +
+                          ") staged — drop the matching images, then say “verify all of these”.");
         } else if (it.kind === "rejected") {
           pushMsg("error", it.name + ": " + it.reason);
         }
@@ -158,7 +173,10 @@
         let evt;
         try { evt = JSON.parse(line); } catch (e) { continue; }
         if (evt.type === "tool_call") pushMsg("tool", "🔧 calling " + evt.tool + "…");
-        else if (evt.type === "tool_step") pushMsg("tool", "🔧 " + evt.tool + " → " + evt.result);
+        else if (evt.type === "tool_step") {
+          pushMsg("tool", "🔧 " + evt.tool + " → " + evt.result);
+          if (evt.download && evt.download.b64) renderDownload(evt.download);
+        }
         else if (evt.type === "message") pushMsg("assistant", evt.text);
         else if (evt.type === "error") pushMsg("error", evt.text);
         else if (evt.type === "confirm") pushMsg("confirm", evt.summary);

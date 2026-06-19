@@ -318,6 +318,12 @@ textarea.mono { font-family: var(--mono); font-size: .98rem; }
 }
 .cw-attachment-x:hover { color: var(--flag); }
 
+/* Batch results-CSV download button, inline in the transcript. */
+.cw-download, .chat-download {
+  display: inline-block; align-self: flex-start; margin: 4px 0 2px;
+  text-decoration: none; font-size: .82rem;
+}
+
 .cw-dropzone { display: none; }
 .cw-root.cw-dragging .cw-panel { outline: none; }
 .cw-root.cw-dragging .cw-dropzone {

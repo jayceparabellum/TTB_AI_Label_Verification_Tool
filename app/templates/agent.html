@@ -21,8 +21,9 @@
 
     <form class="chat-form" id="chat-form" autocomplete="off">
       <button type="button" class="chat-attach" id="chat-attach"
-              aria-label="Attach a label image" title="Attach a label image">📎</button>
-      <input type="file" id="chat-file" accept="image/*" multiple hidden>
+              aria-label="Attach a label image or batch CSV"
+              title="Attach a label image, or a CSV + images for a batch">📎</button>
+      <input type="file" id="chat-file" accept="image/*,.csv" multiple hidden>
       <input type="text" id="chat-input" name="message"
              placeholder="Ask, or attach a label image…" aria-label="Message">
       <input type="hidden" id="chat-image" name="image_id" value="">

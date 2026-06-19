@@ -50,7 +50,20 @@ def _short(content) -> str:
         return f"{verdict} ({data.get('confidence', '?')}% confidence)"
     if data.get("ok") and data.get("new_status"):
         return f"override recorded → {data['new_status']} (audit #{data.get('recorded_id')})"
+    if "total" in data and "passed" in data:          # batch_verify summary
+        return (f"{data['total']} total · {data.get('passed', 0)} pass · "
+                f"{data.get('flagged', 0)} flag")
     return str(data)[:120]
+
+
+def _download(content) -> dict | None:
+    """A results-CSV download descriptor for the client, if the tool emitted one."""
+    try:
+        data = content if isinstance(content, dict) else json.loads(content)
+    except (TypeError, ValueError):
+        return None
+    b64 = data.get("results_csv_b64") if isinstance(data, dict) else None
+    return {"filename": "batch_results.csv", "b64": b64} if b64 else None
 
 
 def _events(update: dict):
@@ -66,7 +79,11 @@ def _events(update: dict):
             continue
         for m in payload.get("messages", []):
             if isinstance(m, ToolMessage):
-                yield _sse({"type": "tool_step", "tool": m.name, "result": _short(m.content)})
+                evt = {"type": "tool_step", "tool": m.name, "result": _short(m.content)}
+                dl = _download(m.content)
+                if dl:
+                    evt["download"] = dl
+                yield _sse(evt)
             elif isinstance(m, AIMessage):
                 for tc in (m.tool_calls or []):
                     yield _sse({"type": "tool_call", "tool": tc["name"]})
