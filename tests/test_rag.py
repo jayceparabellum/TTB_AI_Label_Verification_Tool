@@ -75,6 +75,22 @@ def test_answer_refuses_out_of_corpus():
         assert res["answer"] == generate.REFUSAL and res["citations"] == []
 
 
+def test_answer_refuses_thin_overlap_out_of_corpus():
+    # A thin-overlap off-corpus query (alcohol-labeling sub-topic absent from the
+    # corpus) that the old 0.30 floor wrongly ANSWERED; the calibrated 0.50 coverage
+    # gate now refuses it. Guards the threshold from drifting lenient again.
+    # (High-vocab-overlap off-corpus queries like "Serving Facts panels" / "pictorial
+    # warnings" are NOT caught by coverage alone — see RAG_MIN_CONFIDENCE note; that
+    # needs a distinguishing-term/faithfulness check, tracked as a follow-up.)
+    assert generate.answer("What QR code requirements apply to alcohol labels?")["status"] == "refused"
+
+
+def test_answer_still_cites_borderline_in_corpus():
+    # The tightening must not refuse a genuine in-corpus question with thinner overlap.
+    res = generate.answer("what is the proof requirement for vodka", "spirits")
+    assert res["status"] == "answered" and res["citations"]
+
+
 def test_explain_flag_caps_maps_to_16_22():
     res = generate.explain_flag("government_warning", "header is Title case not ALL CAPS")
     assert res["status"] == "answered"

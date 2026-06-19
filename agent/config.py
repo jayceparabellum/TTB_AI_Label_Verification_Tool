@@ -49,18 +49,29 @@ AUDIT_DB = _path("AGENT_AUDIT_DB", _DATA / "audit.sqlite")          # used in U5
 CHROMA_DIR = _path("RAG_CHROMA_DIR", _DATA / "chroma")
 EMBED_MODEL = os.environ.get("RAG_EMBED_MODEL", "BAAI/bge-small-en-v1.5")
 RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "5"))
-# Below this fused-retrieval score, regulatory tools REFUSE rather than answer.
-RAG_MIN_CONFIDENCE = float(os.environ.get("RAG_MIN_CONFIDENCE", "0.30"))
+# Below this term-coverage score, regulatory tools REFUSE rather than answer.
+# Calibrated against eval/rag_golden.json (2026-06-19): in-corpus questions score
+# coverage >= 0.667 (BM25-only and dense regimes alike), so 0.50 keeps every golden
+# answer while refusing thin-overlap off-corpus queries (e.g. "QR code requirements",
+# coverage 0.33) that the old 0.30 floor wrongly answered. NOTE: this does NOT catch
+# high-vocab-overlap off-corpus queries ("Serving Facts panels" ~0.57 BM25-only,
+# "pictorial health warnings" ~0.83) — those share too much corpus vocabulary to
+# separate by coverage without risking real-query recall; a distinguishing-term /
+# answer-faithfulness check is the proper fix (follow-up, not a threshold).
+RAG_MIN_CONFIDENCE = float(os.environ.get("RAG_MIN_CONFIDENCE", "0.50"))
 
 # --- Dense retrieval (BGE-small, fused with BM25) -----------------------------
 # "auto" = use dense when sentence-transformers + the model are importable, else
 # fall back to BM25-only; "off" forces BM25-only; "on" requires dense (raises if
 # the dependency is missing). Default "auto" keeps the base install fully offline.
 RAG_DENSE = os.environ.get("RAG_DENSE", "auto").lower()
-# A dense (cosine) hit at or above this similarity can support an answer even when
-# lexical term-coverage is thin — lets a genuine semantic match through without
-# weakening the refuse gate for unrelated queries.
-RAG_DENSE_MIN_SIM = float(os.environ.get("RAG_DENSE_MIN_SIM", "0.55"))
+# A dense (cosine) hit at or above this similarity can support an answer when lexical
+# term-coverage is thin. Set high (just above the ~0.79 dense_sim of off-corpus
+# topically-adjacent queries) so the dense rescue can't re-admit what the coverage
+# gate just refused — dense_sim alone does NOT separate in- from off-corpus here
+# (in-corpus ranges 0.735-0.917, overlapping off-corpus 0.74-0.79), so coverage is the
+# primary gate and dense is only a high-confidence assist.
+RAG_DENSE_MIN_SIM = float(os.environ.get("RAG_DENSE_MIN_SIM", "0.80"))
 
 # --- Offline guard ------------------------------------------------------------
 # When set, code paths that would reach the public internet must refuse. The
