@@ -295,7 +295,7 @@ def match_government_warning(ocr_text: str, expected: str = OFFICIAL_GOVERNMENT_
         # casing violation — confidently FLAG it.
         return _flag(
             "Warning present but the header is not in the required ALL CAPS.",
-            "expected the literal 'GOVERNMENT WARNING:' in all capitals (27 CFR 16.22)")
+            "expected literal 'GOVERNMENT WARNING:' (all caps)")
     return _review(
         "The government warning header couldn't be read clearly — please verify by eye.",
         "header region didn't OCR confidently — needs a human to verify")
