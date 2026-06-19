@@ -70,6 +70,7 @@ pip install sentence-transformers            # then RAG_DENSE=auto enables it
 pytest                                        # 155 tests
 python eval/run_eval.py                       # verifier decision board -> eval/REPORT.md
 python eval/run_rag_eval.py                   # RAG hit-rate / faithfulness / citation
+python eval/run_agent_eval.py gate            # agent-behavior gate (replay) -> eval/AGENT_REPORT.md
 ```
 
 ---
@@ -135,6 +136,37 @@ sidecar to extend the stress set.
 Latency stays far under the 5-second budget: **~150–300 ms server compute locally**,
 and **~550–750 ms on the live Render Starter instance** (~1 s round-trip including
 network).
+
+### Agent behavior eval (record → replay)
+
+The deterministic core and RAG each have an eval; the **agent layer on top** has its
+own, with a **record(live) → gate(replay)** split so the gate is deterministic, free,
+and CI-stable. It checks the agent's load-bearing invariants: it reports the
+deterministic tool's verdict **verbatim** (never its own pass/fail), routes to the
+right tool, never runs a WRITE without the **confirm gate** firing, and RAG
+**cites-or-refuses**. A small record-time **LLM-judge** scores each explanation
+(faithfulness + clarity, 1–5) and the scores are threshold-checked at gate time.
+
+```bash
+# gate (FREE, CI-safe) — replays committed snapshots, grades invariants, no LLM.
+# Writes eval/AGENT_REPORT.md and exits non-zero on any violation.
+python eval/run_agent_eval.py gate
+
+# record (LIVE, SPENDS ANTHROPIC CREDITS) — drives the agent against cloud Claude,
+# captures transcripts + confirm-gate interrupts, scores explanations, and writes
+# eval/agent_snapshots/*.json. Manual + infrequent; re-run after any agent/ change.
+LLM_BACKEND=anthropic ANTHROPIC_API_KEY=sk-... python eval/run_agent_eval.py record
+```
+
+**Workflow:** `record` is the only step that touches a model and spends credits — it
+bakes everything the gate needs (transcript, deterministic ground truth, judge
+scores) into committed JSON. `gate` is pure replay over that JSON: it never calls a
+model, so it runs free in CI on every change. Re-record when you change `agent/` or
+the prompts; the gate otherwise grades stale behavior. The repo ships
+`eval/agent_snapshots/` empty (recording is a deliberate, credit-spending step); the
+gate works on whatever snapshots are present and reports *no snapshots yet* on an
+empty set. To prove the gate has teeth, tamper a recorded snapshot (e.g. change a
+narrated PASS to a verdict the tool didn't return) and the gate fails loudly.
 
 ---
 
