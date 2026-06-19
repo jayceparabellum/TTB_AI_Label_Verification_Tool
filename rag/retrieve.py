@@ -13,6 +13,7 @@ gives an interpretable confidence the generator uses to decide cite-vs-refuse.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass
 
 from rank_bm25 import BM25Okapi
@@ -23,6 +24,12 @@ _STOP = {
     "the", "a", "an", "of", "to", "for", "and", "or", "is", "are", "what", "does",
     "do", "need", "needs", "on", "in", "must", "be", "my", "this", "that", "it",
     "how", "can", "i", "with", "as", "at", "by", "if", "show", "me", "tell", "about",
+    # Generic interrogatives and bleached verbs carry no regulatory topical signal.
+    # Dropping them keeps coverage honest and, crucially, keeps the distinguishing-
+    # term gate from flagging a lone common verb (e.g. "put", "apply") as if it
+    # were an off-corpus subject term.
+    "who", "where", "when", "which", "put", "apply", "use", "used", "have", "has",
+    "make", "made", "get", "take", "should", "may", "will", "would", "there",
 }
 
 
@@ -86,6 +93,33 @@ class Retriever:
         self._bm25 = BM25Okapi(
             [_tokens(c.text + " " + (c.heading + " ") * 3) for c in self.chunks])
         self.dense = dense if (dense and getattr(dense, "available", False)) else None
+        # Per-term corpus document frequency, computed once over the same content
+        # tokens the matcher uses (so DF and `matched`/coverage stay consistent).
+        # The corpus is small + static, so this is cheap and memoized for the
+        # lifetime of the retriever.
+        self._df: Counter = Counter()
+        for c in self.chunks:
+            for term in _content(c.text + " " + c.heading):
+                self._df[term] += 1
+
+    def corpus_df(self, term: str) -> int:
+        """Document frequency of a content term across the corpus (0 = corpus-OOV)."""
+        return self._df.get(_fold(term), 0)
+
+    def distinguishing_terms(self, query: str, *, max_df: int = 0,
+                             exclude: set[str] | None = None) -> set[str]:
+        """The query's most-distinguishing content terms: those rare/absent in the
+        corpus (DF <= max_df). DF == 0 (corpus-OOV) is the strongest signal the
+        query is about something the corpus does not cover. `exclude` drops terms
+        the matcher deliberately bridges via synonym expansion (which would
+        otherwise look OOV), so synonyms aren't falsely flagged as distinguishing."""
+        excl = {_fold(t) for t in (exclude or set())}
+        return {t for t in _content(query)
+                if self._df.get(t, 0) <= max_df and t not in excl}
+
+    def chunk_content_terms(self, chunk: Chunk) -> set[str]:
+        """Content terms present in a chunk, normalized the same way the query is."""
+        return _content(chunk.text + " " + chunk.heading)
 
     def _lexical_order(self, matched_by_i: list[int], scores) -> list[int]:
         # Rank by distinct query-term coverage first, BM25 as the tiebreak. For
