@@ -1,5 +1,7 @@
 # TTB AI Label Verification Tool
 
+[![CI](https://github.com/jayceparabellum/TTB_AI_Label_Verification_Tool/actions/workflows/ci.yml/badge.svg)](https://github.com/jayceparabellum/TTB_AI_Label_Verification_Tool/actions/workflows/ci.yml)
+
 A proof-of-concept web app for TTB compliance agents. Upload a label photo plus
 the claimed application data (brand name, alcohol content); the app reads the
 label locally and returns a clear **PASS / FLAG** for each of three checks —
