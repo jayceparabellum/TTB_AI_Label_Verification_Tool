@@ -26,7 +26,7 @@ def test_parity_with_core_reverify_text_on_a_pass():
     assert out["overall_pass"] is core.overall_pass is True
     # Field-level verdicts match the core verbatim.
     assert {f["field"]: f["passed"] for f in out["fields"]} == \
-        {f.field: f.passed for f in core.fields}
+        core.verdicts
 
 
 def test_flag_case_matches_core_when_abv_is_wrong():

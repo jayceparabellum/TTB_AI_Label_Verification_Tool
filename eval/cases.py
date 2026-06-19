@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.samples import SAMPLES
+
 
 @dataclass(frozen=True)
 class EvalCase:
@@ -28,14 +30,19 @@ class EvalCase:
     exp_warning: bool
 
 
-# The three bundled synthetic samples (ground truth from how they were generated).
+# TRUE expected per-field verdict per bundled sample — eval-specific ground truth
+# (brand/ABV/filename come from app.samples.SAMPLES, so they aren't duplicated here).
+_EXPECTED_VERDICTS = {
+    "clean_pass": (True, True, True),
+    "abv_mismatch": (True, False, True),
+    "bad_warning": (True, True, False),
+}
+
+# The bundled synthetic samples, built from the single source of truth (app.samples).
 CLEAN_CASES = [
-    EvalCase("clean_pass", "app/static/samples/clean_pass.png",
-             "Stone's Throw", "5.0", "clean", True, True, True),
-    EvalCase("abv_mismatch", "app/static/samples/abv_mismatch.png",
-             "Stone's Throw", "5.0", "clean", True, False, True),
-    EvalCase("bad_warning", "app/static/samples/bad_warning.png",
-             "Stone's Throw", "5.0", "clean", True, True, False),
+    EvalCase(s.key, f"app/static/samples/{s.filename}",
+             s.brand, s.alcohol_content, "clean", *_EXPECTED_VERDICTS[s.key])
+    for s in SAMPLES.values() if s.key in _EXPECTED_VERDICTS
 ]
 
 # Degraded variants are generated from clean_pass (a fully-compliant label),

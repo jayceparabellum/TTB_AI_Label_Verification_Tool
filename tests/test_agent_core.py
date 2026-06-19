@@ -34,7 +34,7 @@ def _seed_store():
 
 def _core_fields(name, brand, abv):
     r = core_verify((SAMPLES / f"{name}.png").read_bytes(), brand=brand, alcohol_content=abv)
-    return {f.field: f.passed for f in r.fields}, r.overall_pass
+    return r.verdicts, r.overall_pass
 
 
 # --- Button-parity: the tool returns exactly what the core returns -------------

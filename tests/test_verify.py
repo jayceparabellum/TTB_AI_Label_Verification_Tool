@@ -4,9 +4,10 @@ from pathlib import Path
 
 import pytest
 
+from app.samples import SAMPLES_DIR
 from app.verify import verify_label
 
-SAMPLES = Path(__file__).resolve().parent.parent / "app" / "static" / "samples"
+SAMPLES = SAMPLES_DIR          # single source of truth for the bundled-samples path
 pytestmark = pytest.mark.skipif(
     not (SAMPLES / "clean_pass.png").exists(),
     reason="sample images not generated (run scripts/generate_samples.py)",
@@ -21,7 +22,7 @@ def test_clean_pass_all_fields_pass():
     r = _verify("clean_pass.png")
     assert r.readable is True
     assert r.overall_pass is True
-    assert {f.field: f.passed for f in r.fields} == {
+    assert r.verdicts == {
         "brand": True,
         "alcohol_content": True,
         "government_warning": True,
@@ -30,7 +31,7 @@ def test_clean_pass_all_fields_pass():
 
 def test_abv_mismatch_flags_only_alcohol():
     r = _verify("abv_mismatch.png")
-    verdicts = {f.field: f.passed for f in r.fields}
+    verdicts = r.verdicts
     assert verdicts["alcohol_content"] is False
     assert verdicts["brand"] is True
     assert r.overall_pass is False
@@ -38,7 +39,7 @@ def test_abv_mismatch_flags_only_alcohol():
 
 def test_bad_warning_flags_only_warning():
     r = _verify("bad_warning.png")
-    verdicts = {f.field: f.passed for f in r.fields}
+    verdicts = r.verdicts
     assert verdicts["government_warning"] is False
     assert verdicts["brand"] is True
     assert verdicts["alcohol_content"] is True
@@ -137,7 +138,7 @@ def test_large_brand_heading_is_read_not_dropped():
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     r = verify_label(buf.getvalue(), brand="Cedar Hollow", alcohol_content="5.0")
-    assert {f.field: f.passed for f in r.fields}["brand"] is True
+    assert r.verdicts["brand"] is True
 
 
 def test_uneven_lighting_shadow_is_corrected_and_reads():
@@ -155,7 +156,7 @@ def test_uneven_lighting_shadow_is_corrected_and_reads():
     buf = io.BytesIO()
     shadowed.save(buf, format="PNG")
     r = verify_label(buf.getvalue(), brand="Stone's Throw", alcohol_content="5.0")
-    verdicts = {f.field: f.passed for f in r.fields}
+    verdicts = r.verdicts
     assert verdicts["brand"] is True                 # brand recovered from the shadow
     assert verdicts["government_warning"] is True     # warning header recovered too
 

@@ -32,3 +32,9 @@ class VerificationResult:
     @property
     def flagged_count(self) -> int:
         return sum(1 for f in self.fields if not f.passed)
+
+    @property
+    def verdicts(self) -> dict[str, bool]:
+        """Per-field pass/fail keyed by field name — the {f.field: f.passed} map
+        that callers (tests, eval, UI) need repeatedly. One source of truth."""
+        return {f.field: f.passed for f in self.fields}

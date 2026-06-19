@@ -20,7 +20,7 @@ def _png(name):
 
 
 def _verdicts(result):
-    return {f.field: f.passed for f in result.fields}
+    return result.verdicts          # the {field: passed} map now lives on the model
 
 
 # --- Image fixtures -----------------------------------------------------------
