@@ -50,8 +50,8 @@ def _run(name, args, thread="t"):
     return g, out
 
 
-def test_roster_is_ten_tools():
-    assert len(T.ALL_TOOLS) == 10
+def test_roster_is_eleven_tools():
+    assert len(T.ALL_TOOLS) == 11
     assert "batch_verify" in T.WRITE_TOOL_NAMES
     assert "validate_class_type" in {t.name for t in T.READ_TOOLS}
 

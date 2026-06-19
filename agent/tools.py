@@ -18,24 +18,20 @@ from app import ocr as _ocr
 from app import batch as _batch
 from app.matching import match_government_warning as _match_warning
 from app.samples import SAMPLES as _SAMPLES
+from app.verify import reverify_text as _core_reverify_text
 from app.verify import verify_label as _core_verify_label
 from . import audit
 from .images import STORE
 
 _UNREADABLE = "No label image is loaded — please upload one first."
+_UNREADABLE_TEXT = "No label text to verify — please paste the label text first."
 # Most-recent batch result for list_flagged; populated by batch_verify (slice D).
 LAST_BATCH = None
 
 
-def run_verify(image_id: str | None, brand: str, alcohol_content: str) -> dict:
-    """Deterministic verification, serialized verbatim. Shared by the tool and by
-    tests (so the parity assertion needs no InjectedState plumbing)."""
-    if not image_id:
-        return {"error": _UNREADABLE}
-    data = STORE.get(image_id)
-    if data is None:
-        return {"error": _UNREADABLE}
-    r = _core_verify_label(data, brand=brand, alcohol_content=alcohol_content)
+def _serialize(r) -> dict:
+    """Serialize a VerificationResult verbatim — the single shape every verify tool
+    returns, so image and text verdicts are indistinguishable downstream."""
     return {
         "readable": r.readable,
         "overall_pass": r.overall_pass,
@@ -49,6 +45,31 @@ def run_verify(image_id: str | None, brand: str, alcohol_content: str) -> dict:
         ],
         "message": r.message,
     }
+
+
+def run_verify(image_id: str | None, brand: str, alcohol_content: str) -> dict:
+    """Deterministic verification, serialized verbatim. Shared by the tool and by
+    tests (so the parity assertion needs no InjectedState plumbing)."""
+    if not image_id:
+        return {"error": _UNREADABLE}
+    data = STORE.get(image_id)
+    if data is None:
+        return {"error": _UNREADABLE}
+    r = _core_verify_label(data, brand=brand, alcohol_content=alcohol_content)
+    return _serialize(r)
+
+
+def run_verify_text(label_text: str, brand: str, alcohol_content: str,
+                    expected_warning: str = "") -> dict:
+    """Deterministic text re-verification, serialized verbatim. Shared by the tool
+    and by tests so the parity assertion needs no InjectedState plumbing. The pasted
+    text IS the label text (the user supplied it), so there is no OCR step."""
+    if not _ocr.is_readable(label_text):
+        return {"error": _UNREADABLE_TEXT}
+    kwargs = {"expected_warning": expected_warning} if expected_warning else {}
+    r = _core_reverify_text(label_text, brand=brand,
+                            alcohol_content=alcohol_content, **kwargs)
+    return _serialize(r)
 
 
 def _regulation_for(field: str, detail: str) -> dict | None:
@@ -91,6 +112,23 @@ def verify_label(
     27 CFR regulation (grounded + cited) so you can explain *why* it failed. The
     image is taken from the active session (you do not supply it)."""
     result = run_verify(state.get("active_image_id"), brand, alcohol_content)
+    return _attach_regulations(result)
+
+
+@tool
+def verify_text(
+    label_text: str,
+    brand: str,
+    alcohol_content: str,
+    expected_warning: str = "",
+) -> dict:
+    """Verify label TEXT the user pasted or typed (no image) against the claimed
+    brand and alcohol content. Use this when the user gives you the label's wording
+    directly instead of an image. Returns the deterministic per-field PASS/FLAG
+    verdict — this is the authoritative result, not your opinion. Any FLAG carries
+    the controlling 27 CFR regulation (grounded + cited) so you can explain why it
+    failed. The label_text you pass IS the wording to check, verbatim."""
+    result = run_verify_text(label_text, brand, alcohol_content, expected_warning)
     return _attach_regulations(result)
 
 
@@ -245,8 +283,8 @@ def validate_class_type(claimed_designation: str, beverage_type: str = "wine") -
                            "of identity. This is advisory; it is never an auto-rejection.")}
 
 
-READ_TOOLS = [verify_label, extract_label_fields, verify_warning, list_flagged,
-              regulatory_lookup, explain_flag, validate_class_type]
+READ_TOOLS = [verify_label, verify_text, extract_label_fields, verify_warning,
+              list_flagged, regulatory_lookup, explain_flag, validate_class_type]
 WRITE_TOOLS = [override_result, manual_fallback, batch_verify]
 WRITE_TOOL_NAMES = {t.name for t in WRITE_TOOLS}
 ALL_TOOLS = READ_TOOLS + WRITE_TOOLS
