@@ -182,6 +182,21 @@ every change.
   **Ollama** (`langchain-ollama`); a `SqliteSaver` checkpointer keys session memory
   and interrupt/resume by `thread_id`. Streaming SSE chat with **visible tool steps**;
   vanilla JS, no build step. The button UI stays the primary, always-available path.
+- **In-chat omni-ingest — verify your own labels without leaving the chat.** Bytes
+  arrive via a companion `POST /agent/upload` (multipart, returns ids) so the SSE turn
+  stays simple; tools read the bytes from the session by id — **never** from model
+  args — so the deterministic verdict can't be substituted or hallucinated. Three
+  ingest paths, each parity-equal to its button-UI counterpart:
+  - **Image** — drag/drop, pick, or **paste** (clipboard screenshot) a label, then
+    give the claimed brand/ABV → `verify_label`. A "Verify this label" chip auto-suggests.
+  - **Text** — paste or type the label wording → `verify_text` (wraps `reverify_text`).
+  - **Batch** — attach a mapping **CSV + images**, Approve at the confirm gate →
+    `batch_verify` over `run_batch` (25-label cap), streamed summary + flagged list +
+    a **downloadable results CSV**.
+
+  Uploads live **in-process only** (no disk, no PII at rest), are bounded by per-file
+  (10 MB) and per-thread (50 MB) caps, and are **evicted** when the chat is closed
+  (`/agent/reset`). The dedicated `/`, `/text`, `/batch` pages stay primary and untouched.
 - **Human-in-the-loop confirm gate.** Read tools flow through; before any **write**
   (`override_result`, `manual_fallback`, `batch_verify`) the graph calls `interrupt()`
   and resumes only on an explicit human **Approve** — the agent can never auto-commit.
