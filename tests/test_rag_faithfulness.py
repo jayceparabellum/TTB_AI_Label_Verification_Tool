@@ -31,6 +31,14 @@ def test_common_corpus_terms_are_not_distinguishing():
     assert "alcohol" not in flagged and "label" not in flagged
 
 
+def test_rarest_present_term_is_not_distinguishing():
+    # Boundary: a term that appears in the corpus even once (df >= 1) is NOT OOV and
+    # must not be flagged — locks the gate at df==0, so it can't drift to df<=1.
+    r = Retriever()
+    assert r.corpus_df("proof") >= 1
+    assert "proof" not in r.distinguishing_terms("proof requirement for vodka")
+
+
 def test_synonym_expansion_keys_are_excludable():
     # Expansion keys (matcher synonyms) can be corpus-OOV themselves but must be
     # excludable so they aren't mistaken for distinguishing subject terms.
@@ -80,3 +88,14 @@ def test_explain_flag_still_maps_to_16_22():
     res = generate.explain_flag("government_warning", "header is Title case not ALL CAPS")
     assert res["status"] == "answered"
     assert res["citations"][0]["section"] == "16.22"
+
+
+def test_explain_flag_real_fields_answer_off_corpus_field_refuses():
+    # explain_flag is agent-callable with arbitrary strings — the gate keys on the
+    # FIELD (the real subject). Real flagged fields stay answered; an off-corpus
+    # subject field is refused (closes the explain_flag bypass found in review).
+    for field, reason in [("government_warning", "wording differs"),
+                          ("alcohol_content", "label differs from application")]:
+        assert generate.explain_flag(field, reason)["status"] == "answered", field
+    assert generate.explain_flag(
+        "serving_facts", "panel required on alcohol beverage label")["status"] == "refused"

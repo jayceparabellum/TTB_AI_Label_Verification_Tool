@@ -108,15 +108,17 @@ def answer(question: str, beverage_type: str | None = None, k: int = 4) -> dict:
 
 def explain_flag(field: str, failure_reason: str) -> dict:
     """Attach the controlling regulation to a deterministic FLAG, with a citation."""
-    query = _expand(f"{field.replace('_', ' ')} {failure_reason}")
+    field_subject = field.replace("_", " ")
+    query = _expand(f"{field_subject} {failure_reason}")
     results = get_retriever().retrieve(query, k=3)
     top = results[0] if results else None
-    # The faithfulness gate (see `answer`) is keyed to open user questions, where an
-    # OOV term is the query's subject. Here the lookup is keyed by a known FLAGGED
-    # `field` (always a real corpus topic) and the free-text `failure_reason` is
-    # description noise full of non-corpus meta-vocabulary ("expected", "literal",
-    # "differs") — so the per-term OOV gate doesn't apply. Coverage/dense still gate.
-    if not _supported(top):
+    # Faithfulness gate keyed on the FIELD only — not the free-text `failure_reason`,
+    # which is description noise full of non-corpus meta-vocabulary ("expected",
+    # "literal", "differs") that would false-refuse legit internal callers. Keying on
+    # the field's subject terms catches an off-corpus subject (e.g. the agent-exposed
+    # explain_flag tool called with field="serving_facts") while a real flagged field
+    # ("government_warning", "alcohol_content") stays in-corpus and answers.
+    if not _supported(top) or not _faithful(top, field_subject):
         return {"status": "refused", "explanation": REFUSAL, "citations": []}
     return {"status": "answered",
             "explanation": f"{top.chunk.citation} — {top.chunk.text}",
