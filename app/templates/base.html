@@ -61,7 +61,11 @@
         <button type="button" class="cw-attach" id="cw-attach"
                 aria-label="Attach a label image or batch CSV"
                 title="Attach a label image, or a CSV + images for a batch">📎</button>
+        <button type="button" class="cw-attach" id="cw-folder"
+                aria-label="Upload a folder of label images"
+                title="Upload a whole folder of label images">📁</button>
         <input type="file" id="cw-file" accept="image/*,.csv,.zip" multiple hidden>
+        <input type="file" id="cw-folder-file" webkitdirectory hidden>
         <input type="text" id="cw-input" name="message"
                placeholder="Ask, or drop a label image…" aria-label="Message">
         <input type="hidden" id="cw-image" name="image_id" value="">
