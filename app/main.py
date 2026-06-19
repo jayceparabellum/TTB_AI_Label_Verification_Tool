@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from . import batch as batch_mod
+from . import ingest
 from . import ocr
 from .models import VerificationResult
 from .reference import OFFICIAL_GOVERNMENT_WARNING
@@ -293,15 +294,39 @@ def batch_form(request: Request):
     )
 
 
+def _is_zip(name: str, content_type: str) -> bool:
+    return name.lower().endswith(".zip") or content_type in (
+        "application/zip", "application/x-zip-compressed", "application/x-zip")
+
+
+async def _expand_uploads(uploads: list[UploadFile]) -> list[tuple[str, bytes]]:
+    """Read uploads into (filename, bytes), expanding any .zip into its image
+    members so a zipped folder and loose images take the same downstream path.
+    Raises ingest.ZipIngestError on a corrupt or over-cap archive."""
+    out: list[tuple[str, bytes]] = []
+    for up in uploads:
+        data = await up.read()
+        if _is_zip(up.filename or "", (up.content_type or "").lower()):
+            out.extend(ingest.extract_images_from_zip(data))
+        else:
+            out.append((up.filename or "", data))
+    return out
+
+
 @app.post("/batch", response_class=HTMLResponse)
 async def batch_run(
     request: Request,
     images: list[UploadFile] = File(...),
     mapping: UploadFile = File(...),
 ):
-    """Verify a batch of labels against a CSV of claimed data (stateless)."""
-    uploaded = [((img.filename or ""), await img.read()) for img in images]
-    result = batch_mod.run_batch(uploaded, await mapping.read())
+    """Verify a batch of labels against a CSV of claimed data (stateless). The
+    images field accepts loose image files and/or a .zip of label photos."""
+    try:
+        uploaded = await _expand_uploads(images)
+    except ingest.ZipIngestError as exc:
+        result = batch_mod.BatchResult(error=str(exc))
+    else:
+        result = batch_mod.run_batch(uploaded, await mapping.read())
     results_csv_b64 = ""
     if result.rows:
         results_csv_b64 = base64.b64encode(
