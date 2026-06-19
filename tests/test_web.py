@@ -54,7 +54,9 @@ def test_sample_results_use_static_image_url():
 def test_results_have_print_control():
     r = client.post("/verify-sample/clean_pass")
     assert "Print / Save" in r.text
-    assert 'onclick="window.print()"' in r.text
+    # CSP-safe: a data-print hook wired via ui.js, not an inline onclick handler.
+    assert "data-print" in r.text
+    assert 'onclick="window.print()"' not in r.text
 
 
 # --- Detailed per-flag reasons section (T8) -----------------------------------
