@@ -1,7 +1,8 @@
 // Global pop-out assistant. Same SSE backend as the /chat page, but rendered as a
 // minimizable panel docked bottom-right of every page. State (open/closed, thread
-// id, transcript) lives in sessionStorage so the conversation survives navigation
-// across the server-rendered pages and clears when the tab closes. No build step.
+// id, transcript, attached image) lives in sessionStorage so the conversation
+// survives navigation across the server-rendered pages and clears when the tab
+// closes. Drop/pick a label image to verify it in-chat. No build step.
 (function () {
   const root = document.getElementById("cw-root");
   if (!root) return;
@@ -12,10 +13,14 @@
   const imageField = document.getElementById("cw-image");
   const send = document.getElementById("cw-send");
   const launcher = document.getElementById("cw-launcher");
+  const attachBtn = document.getElementById("cw-attach");
+  const fileInput = document.getElementById("cw-file");
+  const attachments = document.getElementById("cw-attachments");
 
   const K_STATE = "cw-state";        // "open" | "closed"
   const K_THREAD = "cw-thread";      // stable thread id -> server-side memory continuity
   const K_LOG = "cw-log";            // JSON array of {kind, text}
+  const K_ATTACH = "cw-attached";    // {id, name} of the uploaded image in focus
 
   function newThread() {
     return (window.crypto && crypto.randomUUID)
@@ -30,6 +35,13 @@
   }
   let messages = loadLog();
   function saveLog() { sessionStorage.setItem(K_LOG, JSON.stringify(messages)); }
+
+  let attached = null;               // {id, name}
+  try { attached = JSON.parse(sessionStorage.getItem(K_ATTACH) || "null"); } catch (e) { attached = null; }
+  function saveAttach() {
+    if (attached) sessionStorage.setItem(K_ATTACH, JSON.stringify(attached));
+    else sessionStorage.removeItem(K_ATTACH);
+  }
 
   // --- rendering -------------------------------------------------------------
   function renderBubble(kind, text) {
@@ -56,16 +68,10 @@
     card.appendChild(p); card.appendChild(row);
     log.appendChild(card);
     log.scrollTop = log.scrollHeight;
-    yes.addEventListener("click", function () {
-      card.remove(); dropConfirm(); resume("approve");
-    });
-    no.addEventListener("click", function () {
-      card.remove(); dropConfirm(); resume("cancel");
-    });
+    yes.addEventListener("click", function () { card.remove(); dropConfirm(); resume("approve"); });
+    no.addEventListener("click", function () { card.remove(); dropConfirm(); resume("cancel"); });
   }
 
-  // Persisted bubble (survives navigation). Confirm cards are persisted too so a
-  // paused write can still be approved after a page change (thread is server-side).
   function pushMsg(kind, text) {
     messages.push({ kind: kind, text: text }); saveLog();
     if (kind === "confirm") renderConfirm(text); else renderBubble(kind, text);
@@ -73,13 +79,67 @@
   function dropConfirm() {
     messages = messages.filter(function (m) { return m.kind !== "confirm"; }); saveLog();
   }
-
   function replay() {
     log.innerHTML = "";
     messages.forEach(function (m) {
       if (m.kind === "confirm") renderConfirm(m.text); else renderBubble(m.kind, m.text);
     });
   }
+
+  // --- attachments / image upload -------------------------------------------
+  function renderAttachment() {
+    attachments.innerHTML = "";
+    if (!attached) return;
+    const chip = document.createElement("span");
+    chip.className = "cw-attachment";
+    chip.appendChild(document.createTextNode("🖼 " + attached.name));
+    const x = document.createElement("button");
+    x.type = "button"; x.className = "cw-attachment-x";
+    x.setAttribute("aria-label", "Remove attached image"); x.textContent = "✕";
+    x.addEventListener("click", removeAttachment);
+    chip.appendChild(x);
+    attachments.appendChild(chip);
+  }
+  function removeAttachment() { attached = null; saveAttach(); renderAttachment(); }
+
+  async function uploadFiles(fileList) {
+    if (!fileList || !fileList.length) return;
+    const fd = new FormData();
+    fd.append("thread_id", threadId);
+    for (let i = 0; i < fileList.length; i++) fd.append("files", fileList[i]);
+    send.disabled = true;
+    try {
+      const resp = await fetch("/agent/upload", { method: "POST", body: fd });
+      const data = await resp.json();
+      (data.items || []).forEach(function (it) {
+        if (it.kind === "image") {
+          attached = { id: it.id, name: it.name }; saveAttach(); renderAttachment();
+          pushMsg("tool", "🖼 Attached " + it.name + " — tell me the brand and ABV to verify it.");
+        } else if (it.kind === "rejected") {
+          pushMsg("error", it.name + ": " + it.reason);
+        }
+      });
+    } catch (e) {
+      pushMsg("error", "Upload failed. The button verifier still works.");
+    } finally {
+      send.disabled = false;
+    }
+  }
+
+  attachBtn.addEventListener("click", function () { fileInput.click(); });
+  fileInput.addEventListener("change", function () { uploadFiles(fileInput.files); fileInput.value = ""; });
+
+  // drag & drop onto the panel
+  ["dragenter", "dragover"].forEach(function (ev) {
+    panel.addEventListener(ev, function (e) { e.preventDefault(); root.classList.add("cw-dragging"); });
+  });
+  panel.addEventListener("dragleave", function (e) {
+    if (!panel.contains(e.relatedTarget)) root.classList.remove("cw-dragging");
+  });
+  panel.addEventListener("drop", function (e) {
+    e.preventDefault(); root.classList.remove("cw-dragging");
+    if (e.dataTransfer && e.dataTransfer.files) uploadFiles(e.dataTransfer.files);
+  });
 
   // --- SSE plumbing (mirrors agent.js) --------------------------------------
   async function streamResponse(resp) {
@@ -122,7 +182,6 @@
     pushMsg("user", message);
     post("/agent/chat", { message: message, image_id: imageId || "", thread_id: threadId });
   }
-
   function resume(decision) {
     pushMsg("user", decision === "approve" ? "✓ Approved" : "✗ Cancelled");
     post("/agent/resume", { thread_id: threadId, decision: decision });
@@ -138,21 +197,21 @@
   launcher.addEventListener("click", function () { setState("open"); });
   document.getElementById("cw-min").addEventListener("click", function () { setState("closed"); });
   document.getElementById("cw-close").addEventListener("click", function () {
-    // Close clears the conversation and starts a fresh thread next time.
+    // Close clears the conversation, evicts any uploaded bytes, and starts fresh.
     messages = []; saveLog(); replay();
+    removeAttachment();
+    fetch("/agent/reset", { method: "POST", body: new URLSearchParams({ thread_id: threadId }) }).catch(function () {});
     threadId = newThread(); sessionStorage.setItem(K_THREAD, threadId);
     setState("closed");
   });
 
-  // Esc closes (keeps the conversation).
-  panel.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") setState("closed");
-  });
+  panel.addEventListener("keydown", function (e) { if (e.key === "Escape") setState("closed"); });
 
   document.querySelectorAll(".cw-chip").forEach(function (chip) {
     chip.addEventListener("click", function () {
       input.value = chip.textContent;
       imageField.value = chip.dataset.image || "";
+      removeAttachment();                 // a sample chip replaces any uploaded image
       input.focus();
     });
   });
@@ -161,12 +220,14 @@
     e.preventDefault();
     const message = input.value.trim();
     if (!message) return;
-    const imageId = imageField.value;
+    // An uploaded image (persisted) takes precedence over a sample chip selection.
+    const imageId = attached ? attached.id : imageField.value;
     input.value = ""; imageField.value = "";
     ask(message, imageId);
   });
 
   // --- restore on load -------------------------------------------------------
   replay();
+  renderAttachment();
   setState(sessionStorage.getItem(K_STATE) === "open" ? "open" : "closed");
 })();

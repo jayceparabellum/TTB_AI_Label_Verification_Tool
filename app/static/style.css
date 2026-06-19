@@ -297,3 +297,49 @@ textarea.mono { font-family: var(--mono); font-size: .98rem; }
 @media (prefers-reduced-motion: reduce) {
   .cw-launcher, .cw-panel { transition: none; }
 }
+
+/* --- In-chat image upload (chat-widget.js / agent.js) ---------------------- */
+.cw-attach {
+  flex: 0 0 auto; width: 40px; height: 42px; border: 1px solid var(--border-strong);
+  border-radius: 10px; background: var(--surface); color: var(--ink-soft);
+  font-size: 1.05rem; cursor: pointer; transition: 150ms ease;
+}
+.cw-attach:hover { border-color: var(--accent); color: var(--accent); }
+.cw-attachments { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px; }
+.cw-attachments:empty { display: none; }
+.cw-attachment {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  background: var(--surface-sunken); border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px 8px; font-size: .82rem; color: var(--ink-soft);
+}
+.cw-attachment-x {
+  border: none; background: transparent; cursor: pointer; color: var(--muted);
+  font-size: .9rem; line-height: 1; padding: 0 2px;
+}
+.cw-attachment-x:hover { color: var(--flag); }
+
+.cw-dropzone { display: none; }
+.cw-root.cw-dragging .cw-panel { outline: none; }
+.cw-root.cw-dragging .cw-dropzone {
+  display: flex; position: absolute; inset: 56px 10px 72px; z-index: 5;
+  align-items: center; justify-content: center; text-align: center; padding: 0 18px;
+  border: 2px dashed var(--accent); border-radius: var(--r);
+  background: rgba(37, 99, 235, .07); color: var(--accent); font-weight: 700;
+  pointer-events: none;
+}
+
+/* --- /chat page upload affordances (agent.js) ----------------------------- */
+.chat-attachments { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+.chat-attachments:empty { display: none; }
+.chat-attachment {
+  display: inline-flex; align-items: center; gap: 6px; background: var(--surface-sunken);
+  border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px;
+  font-size: .85rem; color: var(--ink-soft);
+}
+.chat-attachment-x { border: none; background: transparent; cursor: pointer; color: var(--muted); }
+.chat-attachment-x:hover { color: var(--flag); }
+.chat-attach {
+  width: 46px; border: 1px solid var(--border-strong); border-radius: var(--r);
+  background: var(--surface); color: var(--ink-soft); font-size: 1.1rem; cursor: pointer;
+}
+.chat-attach:hover { border-color: var(--accent); color: var(--accent); }

@@ -11,7 +11,7 @@ import base64
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -95,6 +95,64 @@ def agent_resume(thread_id: str = Form(...), decision: str = Form(...)):
         resume_chat(thread_id, decision),
         media_type="text/event-stream", headers=_SSE_HEADERS,
     )
+
+
+# In-chat upload: stash an uploaded label image in the session so the assistant can
+# verify it (not just the seeded samples). Bytes live in-process only (no disk, no
+# PII); the chat then references the returned id. Caps keep a public demo bounded.
+_MAX_FILE_BYTES = 10 * 1024 * 1024          # 10 MB per file
+_MAX_THREAD_BYTES = 50 * 1024 * 1024        # 50 MB cumulative per chat thread
+_IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff")
+
+
+def _thread_bytes(thread_id: str) -> int:
+    from agent.images import STORE, STAGING
+    ids = (STAGING._by_thread.get(thread_id) or {}).get("image_ids", [])
+    return sum(len(STORE.get(i) or b"") for i in ids)
+
+
+@app.post("/agent/upload")
+async def agent_upload(thread_id: str = Form(...), files: list[UploadFile] = File(...)):
+    """Accept files dropped/picked in the chat. Images are stashed for verification;
+    other types get a friendly rejection. Returns one item per file."""
+    from agent.images import STORE, STAGING
+
+    items = []
+    used = _thread_bytes(thread_id)
+    for f in files:
+        data = await f.read()
+        name = f.filename or "file"
+        ct = (f.content_type or "").lower()
+        lname = name.lower()
+        if len(data) > _MAX_FILE_BYTES:
+            items.append({"kind": "rejected", "name": name,
+                          "reason": "too large — 10 MB max per file"})
+            continue
+        if used + len(data) > _MAX_THREAD_BYTES:
+            items.append({"kind": "rejected", "name": name,
+                          "reason": "this chat has reached its 50 MB upload limit"})
+            continue
+        if ct.startswith("image/") or lname.endswith(_IMAGE_EXTS):
+            image_id = STORE.put(data)
+            STAGING.add_image(thread_id, image_id)
+            used += len(data)
+            items.append({"kind": "image", "id": image_id, "name": name})
+        elif ct in ("text/csv", "application/vnd.ms-excel") or lname.endswith(".csv"):
+            items.append({"kind": "rejected", "name": name,
+                          "reason": "CSV batch in chat is coming soon — use the Batch "
+                                    "page for now"})
+        else:
+            items.append({"kind": "rejected", "name": name,
+                          "reason": "unsupported file — images only for now"})
+    return JSONResponse({"items": items})
+
+
+@app.post("/agent/reset")
+def agent_reset(thread_id: str = Form(...)):
+    """Evict everything a chat thread staged (called when the user closes/clears it)."""
+    from agent.images import STAGING
+    STAGING.clear(thread_id)
+    return JSONResponse({"ok": True})
 
 
 @app.post("/verify-text", response_class=HTMLResponse)

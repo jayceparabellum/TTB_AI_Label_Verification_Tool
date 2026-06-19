@@ -17,9 +17,14 @@
       {% endfor %}
     </div>
 
+    <div class="chat-attachments" id="chat-attachments"></div>
+
     <form class="chat-form" id="chat-form" autocomplete="off">
+      <button type="button" class="chat-attach" id="chat-attach"
+              aria-label="Attach a label image" title="Attach a label image">📎</button>
+      <input type="file" id="chat-file" accept="image/*" multiple hidden>
       <input type="text" id="chat-input" name="message"
-             placeholder="e.g. Verify the Clean Pass sample" aria-label="Message">
+             placeholder="Ask, or attach a label image…" aria-label="Message">
       <input type="hidden" id="chat-image" name="image_id" value="">
       <button type="submit" class="btn-primary" id="chat-send">Send</button>
     </form>

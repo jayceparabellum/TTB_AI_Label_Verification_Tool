@@ -97,6 +97,7 @@ def stream_chat(message: str, image_id: str | None, thread_id: str):
         "active_image_id": image_id,
         "expected": None,
         "last_result_id": None,
+        "thread_id": thread_id,
     }, thread_id)
 
 

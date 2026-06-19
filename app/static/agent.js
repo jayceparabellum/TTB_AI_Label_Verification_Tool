@@ -8,10 +8,15 @@
   const input = document.getElementById("chat-input");
   const imageField = document.getElementById("chat-image");
   const send = document.getElementById("chat-send");
+  const attachBtn = document.getElementById("chat-attach");
+  const fileInput = document.getElementById("chat-file");
+  const attachments = document.getElementById("chat-attachments");
 
   // One thread per page load -> session memory ("that one") persists across turns.
   const threadId = (window.crypto && crypto.randomUUID)
     ? crypto.randomUUID() : "t-" + Date.now() + "-" + Math.floor(Math.random() * 1e6);
+
+  let attached = null;   // {id, name} of an uploaded image in focus (per page)
 
   function bubble(kind, text) {
     const el = document.createElement("div");
@@ -87,10 +92,61 @@
     post("/agent/resume", { thread_id: threadId, decision: decision });
   }
 
+  // --- attachments / image upload -------------------------------------------
+  function renderAttachment() {
+    attachments.innerHTML = "";
+    if (!attached) return;
+    const chip = document.createElement("span");
+    chip.className = "chat-attachment";
+    chip.appendChild(document.createTextNode("🖼 " + attached.name));
+    const x = document.createElement("button");
+    x.type = "button"; x.className = "chat-attachment-x";
+    x.setAttribute("aria-label", "Remove attached image"); x.textContent = "✕";
+    x.addEventListener("click", function () { attached = null; renderAttachment(); });
+    chip.appendChild(x);
+    attachments.appendChild(chip);
+  }
+
+  async function uploadFiles(fileList) {
+    if (!fileList || !fileList.length) return;
+    const fd = new FormData();
+    fd.append("thread_id", threadId);
+    for (let i = 0; i < fileList.length; i++) fd.append("files", fileList[i]);
+    send.disabled = true;
+    try {
+      const resp = await fetch("/agent/upload", { method: "POST", body: fd });
+      const data = await resp.json();
+      (data.items || []).forEach(function (it) {
+        if (it.kind === "image") {
+          attached = { id: it.id, name: it.name }; renderAttachment();
+          bubble("tool", "🖼 Attached " + it.name + " — tell me the brand and ABV to verify it.");
+        } else if (it.kind === "rejected") {
+          bubble("error", it.name + ": " + it.reason);
+        }
+      });
+    } catch (e) {
+      bubble("error", "Upload failed. The button verifier still works.");
+    } finally {
+      send.disabled = false;
+    }
+  }
+
+  attachBtn.addEventListener("click", function () { fileInput.click(); });
+  fileInput.addEventListener("change", function () { uploadFiles(fileInput.files); fileInput.value = ""; });
+  ["dragenter", "dragover"].forEach(function (ev) {
+    log.addEventListener(ev, function (e) { e.preventDefault(); log.classList.add("drag"); });
+  });
+  log.addEventListener("dragleave", function (e) { if (!log.contains(e.relatedTarget)) log.classList.remove("drag"); });
+  log.addEventListener("drop", function (e) {
+    e.preventDefault(); log.classList.remove("drag");
+    if (e.dataTransfer && e.dataTransfer.files) uploadFiles(e.dataTransfer.files);
+  });
+
   document.querySelectorAll(".chip").forEach(function (chip) {
     chip.addEventListener("click", function () {
       input.value = chip.textContent;
       imageField.value = chip.dataset.image || "";
+      attached = null; renderAttachment();         // a sample chip replaces any upload
       input.focus();
     });
   });
@@ -99,7 +155,8 @@
     e.preventDefault();
     const message = input.value.trim();
     if (!message) return;
-    const imageId = imageField.value;
+    // An uploaded image takes precedence over a sample chip selection.
+    const imageId = attached ? attached.id : imageField.value;
     input.value = ""; imageField.value = "";
     ask(message, imageId);
   });
