@@ -53,6 +53,8 @@ def _short(content) -> str:
     if "total" in data and "passed" in data:          # batch_verify summary
         return (f"{data['total']} total · {data.get('passed', 0)} pass · "
                 f"{data.get('flagged', 0)} flag")
+    if "downloads" in data and "count" in data:        # export_audit_log
+        return f"{data['count']} audit row(s) exported — see downloads below"
     return str(data)[:120]
 
 
@@ -64,6 +66,22 @@ def _download(content) -> dict | None:
         return None
     b64 = data.get("results_csv_b64") if isinstance(data, dict) else None
     return {"filename": "batch_results.csv", "b64": b64} if b64 else None
+
+
+def _downloads(content) -> list[dict] | None:
+    """A LIST of download descriptors, if the tool emitted multiple files (e.g. the
+    audit export's CSV + XLSX). Distinct from _download(): that surfaces the single
+    batch results CSV via `results_csv_b64`; this surfaces a tool's `downloads` list
+    so several buttons render in one chat turn. Returns None when absent."""
+    try:
+        data = content if isinstance(content, dict) else json.loads(content)
+    except (TypeError, ValueError):
+        return None
+    dls = data.get("downloads") if isinstance(data, dict) else None
+    if not isinstance(dls, list):
+        return None
+    out = [d for d in dls if isinstance(d, dict) and d.get("b64")]
+    return out or None
 
 
 def _events(update: dict):
@@ -83,6 +101,9 @@ def _events(update: dict):
                 dl = _download(m.content)
                 if dl:
                     evt["download"] = dl
+                dls = _downloads(m.content)
+                if dls:
+                    evt["downloads"] = dls
                 yield _sse(evt)
             elif isinstance(m, AIMessage):
                 for tc in (m.tool_calls or []):
