@@ -41,12 +41,25 @@ def test_upload_image_stashes_and_returns_id():
     assert STORE.get(item["id"]) == _png()     # bytes really stashed, retrievable by id
 
 
-def test_upload_csv_is_friendly_rejected_not_500():
+def test_upload_wellformed_csv_is_staged_with_rowcount():
+    # U5: a valid mapping CSV is accepted and staged as the thread's batch.
+    STAGING._by_thread.clear()
+    csv = b"filename,brand,alcohol_content\na.png,Acme,5.0\nb.png,Beta,12.5\n"
     r = client.post("/agent/upload", data={"thread_id": "tu2"},
+                    files=[("files", ("map.csv", csv, "text/csv"))])
+    assert r.status_code == 200
+    it = r.json()["items"][0]
+    assert it["kind"] == "csv" and it["rows"] == 2
+    assert STAGING.get_batch("tu2")["csv"] == csv      # really staged for the run
+
+
+def test_upload_malformed_csv_is_friendly_rejected_not_500():
+    # A CSV missing a required column is rejected with the core's message, no 500.
+    r = client.post("/agent/upload", data={"thread_id": "tu2b"},
                     files=[("files", ("b.csv", b"filename,brand\n", "text/csv"))])
     assert r.status_code == 200
     it = r.json()["items"][0]
-    assert it["kind"] == "rejected" and "coming soon" in it["reason"]
+    assert it["kind"] == "rejected" and "alcohol_content" in it["reason"]
 
 
 def test_upload_unknown_type_rejected_no_500():

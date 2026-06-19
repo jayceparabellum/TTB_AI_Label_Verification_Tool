@@ -12,10 +12,11 @@ from __future__ import annotations
 from langchain_core.messages import ToolMessage
 from langgraph.types import Command, interrupt
 
+from .images import STAGING
 from .tools import WRITE_TOOL_NAMES
 
 
-def _summary(call: dict) -> str:
+def _summary(call: dict, state: dict) -> str:
     a = call.get("args", {})
     if call["name"] == "override_result":
         return (f"Override result {a.get('result_id') or '(current)'} to "
@@ -23,6 +24,11 @@ def _summary(call: dict) -> str:
     if call["name"] == "manual_fallback":
         return f"Record a manual entry: {a.get('field', '?')} = {a.get('value', '?')}"
     if call["name"] == "batch_verify":
+        tid = state.get("thread_id")
+        staged = STAGING.get_batch(tid) if tid else None
+        if staged:
+            n = len(staged["images"])
+            return f"Run a batch over {n} uploaded label{'s' if n != 1 else ''}"
         return "Verify all loaded sample labels as a batch"
     return f"{call['name']}({a})"
 
@@ -40,7 +46,7 @@ def confirm_gate(state: dict):
         "type": "confirm",
         "action": write_calls[0]["name"],
         "args": write_calls[0]["args"],
-        "summary": _summary(write_calls[0]),
+        "summary": _summary(write_calls[0], state),
     })
 
     if str(decision).strip().lower().startswith("approve"):

@@ -135,12 +135,19 @@ async def agent_upload(thread_id: str = Form(...), files: list[UploadFile] = Fil
         if ct.startswith("image/") or lname.endswith(_IMAGE_EXTS):
             image_id = STORE.put(data)
             STAGING.add_image(thread_id, image_id)
+            # Also stage by original filename so a CSV batch can match it by name.
+            STAGING.add_batch_image(thread_id, name, data)
             used += len(data)
             items.append({"kind": "image", "id": image_id, "name": name})
         elif ct in ("text/csv", "application/vnd.ms-excel") or lname.endswith(".csv"):
-            items.append({"kind": "rejected", "name": name,
-                          "reason": "CSV batch in chat is coming soon — use the Batch "
-                                    "page for now"})
+            try:
+                rows, _dups = batch_mod.parse_csv(data)   # validate before staging
+            except batch_mod.CsvFormatError as exc:
+                items.append({"kind": "rejected", "name": name, "reason": str(exc)})
+                continue
+            STAGING.set_batch_csv(thread_id, data)
+            used += len(data)
+            items.append({"kind": "csv", "name": name, "rows": len(rows)})
         else:
             items.append({"kind": "rejected", "name": name,
                           "reason": "unsupported file — images only for now"})
