@@ -64,6 +64,30 @@ def _verify_result(snap: Snapshot) -> dict | None:
     return None
 
 
+def _verdict_projection(result: dict) -> dict:
+    """The verdict-bearing core of a verification result, stripped of fields that
+    don't change the verdict: wall-clock timing (`elapsed_ms`, varies run-to-run)
+    and the advisory `regulation` annotation the agent tool attaches to FLAGGED
+    fields (a grounded citation that never alters pass/fail — see
+    agent.tools._attach_regulations). What remains — overall_pass, needs_review,
+    readable, and each field's passed/expected/found — IS the verdict the agent
+    must report verbatim."""
+    out = {k: v for k, v in result.items() if k not in {"elapsed_ms"}}
+    fields = out.get("fields")
+    if isinstance(fields, list):
+        out["fields"] = [{k: v for k, v in f.items() if k != "regulation"}
+                         if isinstance(f, dict) else f for f in fields]
+    return out
+
+
+def _verdict_eq(result, ground_truth) -> bool:
+    """True when a tool result carries the same verdict as the ground truth — i.e.
+    the agent's tool reported it verbatim (timing + advisory annotations aside)."""
+    if not isinstance(result, dict) or not isinstance(ground_truth, dict):
+        return result == ground_truth
+    return _verdict_projection(result) == _verdict_projection(ground_truth)
+
+
 def _verdict_word(result: dict | None) -> str | None:
     """Map a serialized verification result to its verdict keyword (D4(c))."""
     if not isinstance(result, dict) or "overall_pass" not in result:
@@ -89,7 +113,7 @@ def _grade_verdict_verbatim(snap: Snapshot) -> tuple[bool, str]:
     result = _verify_result(snap)
     if result is None:
         return False, "no verification tool result in transcript"
-    if snap.ground_truth is not None and result != snap.ground_truth:
+    if snap.ground_truth is not None and not _verdict_eq(result, snap.ground_truth):
         return False, "tool result does not match deterministic ground truth"
     want = _verdict_word(result)
     if want is None:
