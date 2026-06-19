@@ -169,6 +169,26 @@
   attachBtn.addEventListener("click", function () { fileInput.click(); });
   fileInput.addEventListener("change", function () { uploadFiles(fileInput.files); fileInput.value = ""; });
 
+  // Folder upload: pick a whole folder, but only send its image files (filtered
+  // client-side) so folder junk (.DS_Store, the CSV, subdir metadata) never reaches
+  // the server and can't spam "unsupported file" chips.
+  const folderBtn = document.getElementById("cw-folder");
+  const folderInput = document.getElementById("cw-folder-file");
+  function imageFilesOnly(list) {
+    return Array.prototype.filter.call(list, function (f) {
+      return /\.(png|jpe?g|webp|gif|bmp|tiff?)$/i.test(f.name);
+    });
+  }
+  if (folderBtn && folderInput) {
+    folderBtn.addEventListener("click", function () { folderInput.click(); });
+    folderInput.addEventListener("change", function () {
+      const imgs = imageFilesOnly(folderInput.files);
+      if (imgs.length) uploadFiles(imgs);
+      else pushMsg("error", "No image files found in that folder.");
+      folderInput.value = "";
+    });
+  }
+
   // drag & drop onto the panel
   ["dragenter", "dragover"].forEach(function (ev) {
     panel.addEventListener(ev, function (e) { e.preventDefault(); root.classList.add("cw-dragging"); });

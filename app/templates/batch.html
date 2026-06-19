@@ -11,9 +11,11 @@
   <form class="card" action="/batch" method="post" enctype="multipart/form-data" style="margin-top:18px">
     <label class="field">
       <span class="field-label">1. Label images (up to {{ cap }})</span>
-      <input type="file" name="images" accept="image/*,.zip" multiple required>
-      <span class="hint">Pick the photos, or drop in a <strong>.zip</strong> of up to
-        {{ cap }} labels &mdash; it's unzipped and every image is verified.</span>
+      <input type="file" id="batch-images" name="images" accept="image/*,.zip" multiple required>
+      <span class="hint">Pick the photos or a <strong>.zip</strong>, or
+        <button type="button" class="linklike" id="pick-folder">📁 select a whole folder</button>
+        &mdash; folders are read straight through (non-image files are ignored) and
+        every label is verified, up to {{ cap }}.</span>
     </label>
 
     <label class="field">
@@ -31,3 +33,4 @@
 
   <footer class="foot">Proof of concept. Processing is local; nothing you upload is stored.</footer>
 {% endblock %}
+{% block scripts %}<script src="/static/batch.js" defer></script>{% endblock %}

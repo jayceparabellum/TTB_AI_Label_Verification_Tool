@@ -176,6 +176,25 @@
 
   attachBtn.addEventListener("click", function () { fileInput.click(); });
   fileInput.addEventListener("change", function () { uploadFiles(fileInput.files); fileInput.value = ""; });
+
+  // Folder upload: only send image files (filtered client-side) so folder junk
+  // never reaches the server.
+  const folderBtn = document.getElementById("chat-folder");
+  const folderInput = document.getElementById("chat-folder-file");
+  function imageFilesOnly(list) {
+    return Array.prototype.filter.call(list, function (f) {
+      return /\.(png|jpe?g|webp|gif|bmp|tiff?)$/i.test(f.name);
+    });
+  }
+  if (folderBtn && folderInput) {
+    folderBtn.addEventListener("click", function () { folderInput.click(); });
+    folderInput.addEventListener("change", function () {
+      const imgs = imageFilesOnly(folderInput.files);
+      if (imgs.length) uploadFiles(imgs);
+      else bubble("error", "No image files found in that folder.");
+      folderInput.value = "";
+    });
+  }
   ["dragenter", "dragover"].forEach(function (ev) {
     log.addEventListener(ev, function (e) { e.preventDefault(); log.classList.add("drag"); });
   });
