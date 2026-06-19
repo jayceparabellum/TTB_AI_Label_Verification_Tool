@@ -170,6 +170,21 @@ def _verdict(token: str, default: bool) -> bool:
     return default
 
 
+def _sidecar_lines(meta) -> list[str]:
+    """Non-comment lines from a metadata sidecar, warning (not silently defaulting)
+    when it exists but can't be read or carries no usable metadata."""
+    try:
+        lines = [ln for ln in meta.read_text().splitlines()
+                 if ln.strip() and not ln.lstrip().startswith("#")]
+    except OSError as exc:
+        print(f"WARNING: could not read metadata sidecar {meta}: {exc}", file=sys.stderr)
+        return []
+    if not lines:
+        print(f"WARNING: metadata sidecar {meta} has no usable lines — using defaults.",
+              file=sys.stderr)
+    return lines
+
+
 def _stress_cases() -> list[EvalCase]:
     """OUT-OF-SCOPE stress photos in eval/images/real/: arbitrary phone photos of
     bottles (glare, reflections, dark backgrounds) — NOT the product's intended
@@ -191,8 +206,7 @@ def _stress_cases() -> list[EvalCase]:
         brand, abv = "", "5.0"
         eb = ea = ew = True
         if meta.exists():
-            lines = [ln for ln in meta.read_text().splitlines()
-                     if ln.strip() and not ln.lstrip().startswith("#")]
+            lines = _sidecar_lines(meta)
             if lines:
                 parts = [p.strip() for p in lines[0].split("|")]
                 brand = parts[0] if parts else ""
@@ -227,8 +241,7 @@ def _real_clean_cases() -> list[EvalCase]:
         meta = img.with_suffix(".txt")
         brand, abv = "", "5.0"
         if meta.exists():
-            lines = [ln for ln in meta.read_text().splitlines()
-                     if ln.strip() and not ln.lstrip().startswith("#")]
+            lines = _sidecar_lines(meta)
             if lines:
                 parts = [p.strip() for p in lines[0].split("|")]
                 brand = parts[0] if parts else ""

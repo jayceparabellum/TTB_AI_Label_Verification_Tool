@@ -183,6 +183,14 @@ def _abv_candidates(ocr_text: str) -> list[tuple[float, str]]:
 def match_alcohol_content(expected: str, ocr_text: str) -> FieldResult:
     """Numeric ABV match. Understands '%', 'ALC/VOL', and proof (= 2 x ABV)."""
     claimed = _parse_claimed_abv(expected)
+    if claimed is None:
+        # The CLAIMED value (application input), not the label, has no parseable
+        # number — say so explicitly instead of the misleading "no alcohol on label".
+        return FieldResult(
+            field="alcohol_content", label="Alcohol content", passed=False,
+            expected=expected or "(none)",
+            found="(claimed alcohol content not understood)",
+            detail=f"could not parse a numeric ABV from the claimed value '{expected}'")
     candidates = _abv_candidates(ocr_text)
 
     matched = None

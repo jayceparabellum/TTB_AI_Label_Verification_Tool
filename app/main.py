@@ -8,7 +8,10 @@ agent. Stateless: nothing is persisted; each request is processed and discarded.
 from __future__ import annotations
 
 import base64
+import logging
 from pathlib import Path
+
+_log = logging.getLogger(__name__)
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -261,10 +264,23 @@ async def verify(
     expected_warning: str = Form(OFFICIAL_GOVERNMENT_WARNING),
 ):
     image_bytes = await label_image.read()
+    if not image_bytes:
+        return _render_result(
+            request, None, brand, alcohol_content,
+            error="No image was uploaded — please choose a label image and try again.",
+            status_code=400)
     warning = expected_warning or OFFICIAL_GOVERNMENT_WARNING
-    result = verify_label(
-        image_bytes, brand=brand, alcohol_content=alcohol_content, expected_warning=warning
-    )
+    try:
+        result = verify_label(
+            image_bytes, brand=brand, alcohol_content=alcohol_content, expected_warning=warning
+        )
+    except Exception:  # noqa: BLE001 — surface a clear error page, not an unhandled 500
+        _log.exception("verify_label failed for a /verify upload (%d bytes)", len(image_bytes))
+        return _render_result(
+            request, None, brand, alcohol_content,
+            error="Something went wrong verifying this label. Please try again; if it "
+                  "persists, check the server logs.",
+            status_code=500)
     return _render_result(
         request, result, brand, alcohol_content,
         image_src=ocr.to_thumbnail_data_uri(image_bytes),
@@ -276,16 +292,30 @@ async def verify(
 @app.post("/verify-sample/{key}", response_class=HTMLResponse)
 def verify_sample(request: Request, key: str):
     sample = SAMPLES.get(key)
-    if sample is None or not sample.path.exists():
+    if sample is None:
         return _render_result(
             request, None, "", "", error=f"Unknown sample '{key}'.", status_code=404
         )
-    result = verify_label(
-        sample.path.read_bytes(),
-        brand=sample.brand,
-        alcohol_content=sample.alcohol_content,
-        expected_warning=OFFICIAL_GOVERNMENT_WARNING,
-    )
+    if not sample.path.exists():
+        _log.error("sample '%s' is configured but its image is missing: %s", key, sample.path)
+        return _render_result(
+            request, None, "", "",
+            error=f"Sample '{key}' is configured but its image is missing on the server. "
+                  "Run scripts/generate_samples.py to regenerate the bundled samples.",
+            status_code=500)
+    try:
+        result = verify_label(
+            sample.path.read_bytes(),
+            brand=sample.brand,
+            alcohol_content=sample.alcohol_content,
+            expected_warning=OFFICIAL_GOVERNMENT_WARNING,
+        )
+    except Exception:  # noqa: BLE001
+        _log.exception("verify_label failed for sample '%s'", key)
+        return _render_result(
+            request, None, sample.brand, sample.alcohol_content,
+            error="Something went wrong verifying this sample. Please check the server logs.",
+            status_code=500)
     return _render_result(
         request, result, sample.brand, sample.alcohol_content,
         image_src=f"/static/samples/{sample.filename}",

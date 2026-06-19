@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 import time
 
 from . import ocr
+
+_log = logging.getLogger(__name__)
 from .matching import (
     match_alcohol_content,
     match_brand,
@@ -85,8 +88,10 @@ def verify_label(
 
     try:
         text, confidence = ocr.extract_text_data(image_bytes)
-    except ocr.OcrReadError:
-        # Undecodable/corrupt/oversized upload (e.g. a HEIC photo or a PDF).
+    except ocr.OcrReadError as exc:
+        # Undecodable/corrupt/oversized upload (e.g. a HEIC photo or a PDF). Log it
+        # (diagnosable) before returning the friendly "unreadable" result.
+        _log.warning("OCR failed for upload (%d bytes): %s", len(image_bytes or b""), exc)
         return VerificationResult(
             readable=False,
             elapsed_ms=int((time.perf_counter() - start) * 1000),
