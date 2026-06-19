@@ -21,3 +21,6 @@ class AgentState(TypedDict):
     expected: Optional[dict]          # {"brand": str, "alcohol_content": str, ...}
     # Id of the most recent verification result (for "approve/override that one").
     last_result_id: Optional[str]
+    # The chat thread id — lets write-tool confirm summaries and the batch tool
+    # locate this thread's staged uploads (set from the request, never the model).
+    thread_id: Optional[str]

@@ -47,6 +47,7 @@
       </header>
 
       <div class="cw-log" id="cw-log" aria-live="polite"></div>
+      <div class="cw-dropzone" id="cw-dropzone" aria-hidden="true">Drop a label image to verify</div>
 
       <div class="cw-chips" id="cw-chips">
         {% for label, image_id in prompt_chips %}
@@ -54,9 +55,14 @@
         {% endfor %}
       </div>
 
+      <div class="cw-attachments" id="cw-attachments"></div>
+
       <form class="cw-form" id="cw-form" autocomplete="off">
+        <button type="button" class="cw-attach" id="cw-attach"
+                aria-label="Attach a label image" title="Attach a label image">📎</button>
+        <input type="file" id="cw-file" accept="image/*" multiple hidden>
         <input type="text" id="cw-input" name="message"
-               placeholder="Ask the assistant…" aria-label="Message">
+               placeholder="Ask, or drop a label image…" aria-label="Message">
         <input type="hidden" id="cw-image" name="image_id" value="">
         <button type="submit" class="cw-send" id="cw-send" aria-label="Send">▸</button>
       </form>
