@@ -148,3 +148,58 @@ def test_gate_fails_when_any_case_fails(tmp_path):
 def test_gate_on_empty_dir_exits_zero(tmp_path):
     code = R.run_gate(snapshot_dir=tmp_path / "empty", report_path=tmp_path / "rep.md")
     assert code == 0
+
+
+# --- Review fixes (PR #31 review): negation, RAG-by-tool-name, WRITE coherence -
+def _verify_snap_msg(message, *, overall_pass=False):
+    result = {"overall_pass": overall_pass, "needs_review": False,
+              "fields": [], "message": "x"}
+    return AC.Snapshot(
+        case_id="verify_msg", expected_tool="verify_label",
+        invariants=[AC.INV_VERDICT_VERBATIM, AC.INV_TOOL_ROUTING], is_write=False,
+        transcript=[AC.tool_call_step("verify_label", {}),
+                    AC.tool_result_step("verify_label", result),
+                    AC.message_step(message)],
+        ground_truth=dict(result))
+
+
+def test_verdict_verbatim_fails_on_negated_keyword():
+    # FLAG verdict, but the narration negates it ("does not flag") -> must fail (#1).
+    g = R.grade_snapshot(_verify_snap_msg("This label does not FLAG any real problems."))
+    assert not g["invariants"][AC.INV_VERDICT_VERBATIM][0]
+
+
+def test_verdict_verbatim_passes_on_unnegated_keyword():
+    g = R.grade_snapshot(_verify_snap_msg("This label is a FLAG on alcohol content."))
+    assert g["invariants"][AC.INV_VERDICT_VERBATIM][0]
+
+
+def test_cite_or_refuse_ignores_validate_class_type_status():
+    # validate_class_type also returns a "status" (OK/REVIEW) but is NOT a cite-or-
+    # refuse tool; keying off tool name (#2) means it can't spuriously fail the gate.
+    snap = AC.Snapshot(
+        case_id="rag_plus_validate", expected_tool="regulatory_lookup",
+        invariants=[AC.INV_TOOL_ROUTING, AC.INV_CITE_OR_REFUSE], is_write=False,
+        transcript=[
+            AC.tool_call_step("regulatory_lookup", {}),
+            AC.tool_result_step("regulatory_lookup",
+                                {"status": "answered", "citations": [{"citation": "27 CFR 4.33"}]}),
+            AC.tool_result_step("validate_class_type",
+                                {"status": "OK", "advisory": True, "citations": []}),
+            AC.message_step("See citation."),
+        ])
+    assert R.grade_snapshot(snap)["invariants"][AC.INV_CITE_OR_REFUSE][0]
+
+
+def test_write_case_without_confirm_gate_invariant_fails():
+    # A WRITE case that doesn't declare the confirm-gate invariant must fail (#3) —
+    # a write can't be recorded without checking the human gate fired.
+    snap = AC.Snapshot(
+        case_id="write_no_gate", expected_tool="batch_verify",
+        invariants=[AC.INV_TOOL_ROUTING], is_write=True,
+        transcript=[AC.tool_call_step("batch_verify", {}),
+                    AC.tool_result_step("batch_verify", {"total": 1, "passed": 1, "flagged": 0}),
+                    AC.message_step("done")])
+    g = R.grade_snapshot(snap)
+    assert not g["passed"]
+    assert not g["invariants"][AC.INV_CONFIRM_GATE][0]
