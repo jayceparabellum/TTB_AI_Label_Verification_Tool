@@ -8,10 +8,13 @@ in-process and easily meets the <5s latency budget on a legible label.
 from __future__ import annotations
 
 import io
+import logging
 import os
 import re
 import shutil
 from pathlib import Path
+
+_log = logging.getLogger(__name__)
 
 import numpy as np
 import pytesseract
@@ -33,6 +36,21 @@ class OcrReadError(Exception):
     """
 
 
+class TesseractNotFoundError(Exception):
+    """No Tesseract binary is available (neither on PATH nor locally extracted).
+
+    A deployment/configuration error — distinct from OcrReadError so it is NOT
+    masked as a per-label "unreadable" result. Surfaced eagerly with install
+    instructions instead of an opaque failure deep in the first OCR call.
+    """
+
+
+_INSTALL_HINT = (
+    "Tesseract OCR is not installed or not on PATH. Install it with "
+    "`sudo apt-get install -y tesseract-ocr` (Debian/Ubuntu) or "
+    "`brew install tesseract` (macOS).")
+
+
 def _configure_local_tesseract() -> None:
     """Use a no-root, locally-extracted Tesseract when the system has none.
 
@@ -42,11 +60,13 @@ def _configure_local_tesseract() -> None:
     (LD_LIBRARY_PATH / TESSDATA_PREFIX) that the subprocess will inherit.
     """
     if shutil.which("tesseract"):
-        return
+        return                                  # system Tesseract on PATH — normal case
     prefix = Path.home() / ".local" / "tess"
     binary = prefix / "usr" / "bin" / "tesseract"
     if not binary.exists():
-        return
+        # No system Tesseract and no local extraction — fail loud with a fix, rather
+        # than letting the first OCR call die with an opaque "tesseract not found".
+        raise TesseractNotFoundError(_INSTALL_HINT)
     pytesseract.pytesseract.tesseract_cmd = str(binary)
     libdirs = [prefix / "usr" / "lib" / "x86_64-linux-gnu", prefix / "usr" / "lib"]
     existing = os.environ.get("LD_LIBRARY_PATH", "")
@@ -56,6 +76,9 @@ def _configure_local_tesseract() -> None:
     tessdata = next(prefix.rglob("eng.traineddata"), None)
     if tessdata is not None:
         os.environ["TESSDATA_PREFIX"] = str(tessdata.parent)
+    else:
+        _log.warning("eng.traineddata not found under %s — OCR will likely fail until "
+                     "the language data is installed.", prefix)
 
 
 _configured = False
@@ -92,6 +115,8 @@ MAX_PIXELS = 40_000_000
 
 
 def _prepare(image_bytes: bytes) -> Image.Image:
+    if not image_bytes:
+        raise OcrReadError("empty image payload")
     img = Image.open(io.BytesIO(image_bytes))
     # The header gives dimensions without decoding the pixels, so we can reject
     # an oversized/bomb image before paying to decode it.
