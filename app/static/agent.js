@@ -159,6 +159,10 @@
         } else if (it.kind === "csv") {
           bubble("tool", "📎 " + it.name + " (" + it.rows + " row" + (it.rows === 1 ? "" : "s") +
                          ") staged — drop the matching images, then say “verify all of these”.");
+        } else if (it.kind === "zip") {
+          bubble("tool", "📦 " + it.name + " — " + it.extracted + " label" +
+                         (it.extracted === 1 ? "" : "s") + " unzipped and staged. " +
+                         "Add the CSV (if you haven't), then say “verify all of these”.");
         } else if (it.kind === "rejected") {
           bubble("error", it.name + ": " + it.reason);
         }

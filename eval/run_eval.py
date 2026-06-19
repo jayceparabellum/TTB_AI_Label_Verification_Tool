@@ -208,6 +208,37 @@ def _stress_cases() -> list[EvalCase]:
     return out
 
 
+def _real_clean_cases() -> list[EvalCase]:
+    """Real, genuinely-compliant label images dropped into eval/images/real_clean/.
+
+    This is the corpus the synthetic set can't be: actual submitted-label artwork
+    whose TRUE verdict is all-PASS. It directly measures the false-positive rate
+    (clean labels confidently flagged) and is SCORED in the board. Each image takes
+    an optional sidecar .txt `brand|abv` (verdict is all-PASS by definition — these
+    are known-compliant); '#' lines are comments. Empty folder -> no cases (the
+    documented measurement gap until real labels are added)."""
+    out = []
+    real_dir = IMAGES / "real_clean"
+    if not real_dir.exists():
+        return out
+    for img in sorted(real_dir.glob("*")):
+        if img.suffix.lower() not in {".png", ".jpg", ".jpeg"}:
+            continue
+        meta = img.with_suffix(".txt")
+        brand, abv = "", "5.0"
+        if meta.exists():
+            lines = [ln for ln in meta.read_text().splitlines()
+                     if ln.strip() and not ln.lstrip().startswith("#")]
+            if lines:
+                parts = [p.strip() for p in lines[0].split("|")]
+                brand = parts[0] if parts else ""
+                if len(parts) > 1 and parts[1]:
+                    abv = parts[1]
+        out.append(EvalCase(img.stem, str(img.relative_to(ROOT)), brand, abv,
+                            "real_clean", True, True, True))
+    return out
+
+
 def _run(case: EvalCase):
     r = verify_label((ROOT / case.image).read_bytes(),
                      brand=case.brand, alcohol_content=case.alcohol_content)
@@ -228,11 +259,18 @@ def _score(cases: list[EvalCase]) -> dict:
     are not errors."""
     clean_c = clean_t = 0
     conf_correct = conf_wrong = review = 0
+    # False-positive control (Six Sigma): a TRUE-compliant label that gets a
+    # *confident* FLAG is a false positive — the "clean labels being flagged"
+    # defect. (A confident wrong on a NON-compliant label is a false negative,
+    # the worse, regulatory miss; tracked separately.)
+    compliant = false_pos = false_neg = 0
     max_ms = 0
     rows = []
     for c in cases:
         res = _run(c)
         max_ms = max(max_ms, res["ms"])
+        compliant_case = c.exp_brand and c.exp_alcohol and c.exp_warning
+        compliant += int(compliant_case)
         if not res["readable"]:
             cells, outcome = ["unreadable"] * 3, "review"
             review += 1
@@ -253,11 +291,14 @@ def _score(cases: list[EvalCase]) -> dict:
             else:
                 outcome = "WRONG"
                 conf_wrong += 1
+                false_pos += int(compliant_case)        # confident flag on a compliant label
+                false_neg += int(not compliant_case)    # confident wrong on a non-compliant one
         rows.append((c, cells, outcome, res["ms"]))
     conf_total = conf_correct + conf_wrong
     return {"clean_c": clean_c, "clean_t": clean_t, "total": len(cases),
             "conf_total": conf_total, "conf_correct": conf_correct,
-            "conf_wrong": conf_wrong, "review": review, "max_ms": max_ms, "rows": rows}
+            "conf_wrong": conf_wrong, "review": review, "max_ms": max_ms, "rows": rows,
+            "compliant": compliant, "false_pos": false_pos, "false_neg": false_neg}
 
 
 def main() -> None:
@@ -266,7 +307,8 @@ def main() -> None:
     # submitted label images, plus readable product label images. Arbitrary bottle
     # photos are out-of-scope (reported separately, not scored).
     synthetic = CLEAN_CASES + _make_degraded()
-    scored = synthetic + _make_inscope_labels()
+    real_clean = _real_clean_cases()
+    scored = synthetic + _make_inscope_labels() + real_clean
     stress = _stress_cases()
 
     from app import ocr  # toggle preprocessing for the before/after (U4)
@@ -323,6 +365,16 @@ def main() -> None:
         f"= **{margin:.2f}%**  → {'**PASS** (< 1%)' if margin < 1.0 else '**FAIL** (≥ 1%)'}",
         f"- **Logic-on-clean accuracy:** {on['clean_c']}/{on['clean_t']} "
         f"= **{pct(on['clean_c'], on['clean_t']):.1f}%** (decision logic on clean reads)",
+        f"- **False-positive rate (compliant labels confidently FLAGged):** "
+        f"{on['false_pos']}/{on['compliant']} = **{pct(on['false_pos'], on['compliant']):.2f}%** "
+        f"— the 'clean labels being flagged' defect; a compliant-but-unreadable label "
+        f"safely defers and is not counted as a false positive.",
+        f"- **False-negative count (non-compliant labels confidently PASSed):** "
+        f"{on['false_neg']} — the worst, regulatory-miss error; must stay 0.",
+        f"- **Real clean labels in the corpus:** {len(real_clean)}"
+        + ("" if real_clean else " — ⚠️ none yet. The synthetic set can't exhibit the "
+           "real-world false-positive defect; drop genuinely-compliant label images into "
+           "`eval/images/real_clean/` to measure and calibrate (see its README)."),
         f"- **Max latency:** {max_ms} ms (budget 5000 ms) "
         f"-> {'PASS' if max_ms < 5000 else 'FAIL'}",
         "",

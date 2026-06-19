@@ -28,12 +28,26 @@ BRAND_SIMILARITY_THRESHOLD = 95.0
 # A small epsilon absorbs float representation only, not real differences.
 ABV_TOLERANCE = 0.05
 # Government warning: how closely the OCR'd warning body must match the official
-# 27 CFR 16.21 text. Exact-substring (the old rule) failed a fully-compliant
-# label whenever OCR dropped a single character in the 283-char block — the
-# dominant false-FLAG. A high fuzzy threshold tolerates a few characters of OCR
-# noise (compliant reads score >=99.6%) while still failing altered wording
-# (a changed/added/dropped word scores <=98.8%). Measured in eval/REPORT.md.
-WARNING_SIMILARITY_THRESHOLD = 99.0
+# 27 CFR 16.21 text.
+#
+# Two thresholds form a confidence BAND so a compliant-but-noisy warning is
+# DEFERRED to a human (NEEDS REVIEW) instead of confidently FLAGged — the dominant
+# false-positive on real labels (Six Sigma verification, 2026-06-19):
+#   * body similarity >= PASS  AND ALL-CAPS header present -> PASS
+#   * REVIEW_FLOOR <= body < PASS (or a garbled header)    -> NEEDS REVIEW (defer)
+#   * body < REVIEW_FLOOR                                   -> FLAG (wording genuinely differs)
+# A defer can never become a wrong PASS, so this only ever converts a
+# (possibly-false) confident FLAG into a safe human review.
+#
+# NOTE: REVIEW_FLOOR is provisional — calibrate it against the real-clean-label
+# eval slice (eval/images/real_clean/) once that data exists; today it is set low
+# so genuinely-compliant-but-noisy reads land in REVIEW, not FLAG.
+WARNING_SIMILARITY_THRESHOLD = 99.0     # PASS at/above this (compliant reads score >=99.6%)
+WARNING_REVIEW_FLOOR = 85.0             # below this, body wording is genuinely wrong -> FLAG
+# How closely the detected header region must match "GOVERNMENT WARNING:" (any case)
+# to treat a non-ALL-CAPS header as a *deliberate* Title-case violation (a crisp FLAG)
+# rather than OCR noise on the header (defer to REVIEW).
+WARNING_HEADER_MATCH_THRESHOLD = 90.0
 
 
 @dataclass
@@ -213,6 +227,26 @@ def _warning_window(norm_ocr: str, norm_expected: str) -> str | None:
     return norm_ocr[idx: idx + int(len(norm_expected) * 1.2)]
 
 
+def _all_official_words_present(window: str, norm_expected: str,
+                                min_word_ratio: float = 80.0) -> bool:
+    """True only if every word of the official warning has a close match in the OCR
+    window. Character-level fuzz.ratio alone can't catch a DROPPED short word — e.g.
+    removing 'not' from 'should not drink' still scores ~99% — which would confidently
+    PASS a meaning-inverted, non-compliant warning (the worst error). OCR noise
+    substitutes characters *within* words (so each word still matches fuzzily) but
+    does not delete whole words, so a missing word signals genuine alteration."""
+    win_words = normalize_loose(window).split()
+    # Only check words of length >= 3: 1-2 char words ('a', 'of', '1') fuzzy-match
+    # unreliably and OCR rarely drops them meaningfully, whereas the meaning-bearing
+    # words that invert compliance ('not', 'risk', 'pregnancy') are all >= 3 chars.
+    for word in normalize_loose(norm_expected).split():
+        if len(word) < 3:
+            continue
+        if not any(fuzz.ratio(word, w) >= min_word_ratio for w in win_words):
+            return False
+    return True
+
+
 def match_government_warning(ocr_text: str, expected: str = OFFICIAL_GOVERNMENT_WARNING) -> FieldResult:
     """Verify the government warning: strict on wording + ALL-CAPS casing, but
     tolerant of OCR noise, and DEFERRING (not flagging) when it can't be read.
@@ -230,31 +264,62 @@ def match_government_warning(ocr_text: str, expected: str = OFFICIAL_GOVERNMENT_
     norm_expected = normalize_whitespace(expected)
     window = _warning_window(norm_ocr, norm_expected)
 
-    # Region didn't OCR -> inconclusive (defer to NEEDS REVIEW), not a FLAG.
-    if window is None:
+    def _review(found: str, detail: str) -> FieldResult:
+        # Present-but-uncertain -> defer to a human. Never a confident FLAG, never PASS.
         return FieldResult(
             field="government_warning", label="Government warning", passed=False,
-            expected=expected,
-            found="The government warning couldn't be read on this image.",
-            detail="warning text not detected — needs a human to verify",
-            inconclusive=True,
-        )
+            expected=expected, found=found, detail=detail, inconclusive=True)
 
-    has_header = WARNING_HEADER in norm_ocr            # case-sensitive ALL CAPS
+    def _flag(found: str, detail: str) -> FieldResult:
+        return FieldResult(
+            field="government_warning", label="Government warning", passed=False,
+            expected=expected, found=found, detail=detail)
+
+    # Region didn't OCR at all (header not found even case-insensitively) -> REVIEW.
+    if window is None:
+        return _review(
+            "The government warning couldn't be read on this image.",
+            "warning text not detected — needs a human to verify")
+
+    has_allcaps_header = WARNING_HEADER in norm_ocr            # exact ALL CAPS
     similarity = fuzz.ratio(norm_expected, window)
-    passed = has_header and similarity >= WARNING_SIMILARITY_THRESHOLD
 
-    if passed:
-        found = "Official warning present (correct wording and ALL CAPS)."
-        detail = f"matches 27 CFR 16.21 ({similarity:.0f}% similarity, ALL CAPS)"
-    elif not has_header:
-        found = "Warning present but header is not in required ALL CAPS."
-        detail = "expected literal 'GOVERNMENT WARNING:' (all caps)"
-    else:
-        found = "Header present, but wording does not match the official text."
-        detail = f"wording differs from 27 CFR 16.21 ({similarity:.0f}% similarity)"
+    if has_allcaps_header:
+        # PASS needs BOTH a high character match AND every official word present, so
+        # a dropped meaning-bearing word (e.g. 'not') can't ride a high char-ratio
+        # into a confident PASS — it falls to REVIEW (defer), never a wrong PASS.
+        if (similarity >= WARNING_SIMILARITY_THRESHOLD
+                and _all_official_words_present(window, norm_expected)):
+            return FieldResult(
+                field="government_warning", label="Government warning", passed=True,
+                expected=expected,
+                found="Official warning present (correct wording and ALL CAPS).",
+                detail=f"matches 27 CFR 16.21 ({similarity:.0f}% similarity, ALL CAPS)")
+        if similarity >= WARNING_REVIEW_FLOOR:
+            # Header is correct and the wording is close but not a confident match —
+            # most likely OCR noise on a compliant warning. Defer, don't FLAG.
+            return _review(
+                "Warning header is correct, but the wording couldn't be read clearly "
+                "enough to confirm — please verify by eye.",
+                f"close to 27 CFR 16.21 but below the confidence cutoff "
+                f"({similarity:.0f}% vs {WARNING_SIMILARITY_THRESHOLD:.0f}% needed)")
+        return _flag(
+            "Header present, but the wording does not match the official text.",
+            f"wording differs from 27 CFR 16.21 ({similarity:.0f}% similarity)")
 
-    return FieldResult(
-        field="government_warning", label="Government warning", passed=passed,
-        expected=expected, found=found, detail=detail,
-    )
+    # No ALL-CAPS header. Is a header present in another case (a deliberate Title-case
+    # violation -> crisp FLAG), or is the header region just garbled (-> defer)?
+    idx = norm_ocr.lower().find(WARNING_HEADER.lower())
+    header_substr = norm_ocr[idx: idx + len(WARNING_HEADER)] if idx >= 0 else ""
+    header_match = fuzz.ratio(header_substr.lower(), WARNING_HEADER.lower())
+    header_is_clean = header_match >= WARNING_HEADER_MATCH_THRESHOLD and not header_substr.isupper()
+
+    if header_is_clean and similarity >= WARNING_REVIEW_FLOOR:
+        # A clearly-readable header that is not ALL CAPS is a genuine 27 CFR 16.22
+        # casing violation — confidently FLAG it.
+        return _flag(
+            "Warning present but the header is not in the required ALL CAPS.",
+            "expected literal 'GOVERNMENT WARNING:' (all caps)")
+    return _review(
+        "The government warning header couldn't be read clearly — please verify by eye.",
+        "header region didn't OCR confidently — needs a human to verify")

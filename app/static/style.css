@@ -154,15 +154,35 @@ textarea.mono { font-family: var(--mono); font-size: .98rem; }
 .result-card { border: 1px solid var(--border); border-left: 6px solid var(--border-strong); border-radius: var(--r); padding: 20px; background: var(--surface); box-shadow: var(--shadow-sm); }
 .result-card.pass { border-left-color: var(--pass); }
 .result-card.flag { border-left-color: var(--flag); }
+.result-card.review { border-left-color: var(--review); }
 .result-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .badge { font-weight: 800; padding: 5px 13px; border-radius: 999px; color: #fff; font-size: .82rem; letter-spacing: .03em; }
 .result-card.pass .badge { background: var(--pass); }
 .result-card.flag .badge { background: var(--flag); }
+.result-card.review .badge { background: var(--review); }
 .result-name { font-size: 1.2rem; font-weight: 700; color: var(--ink); }
 .result-detail { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; margin: 0; }
 .result-detail dt { color: var(--muted); font-size: .9rem; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; padding-top: 2px; }
 .result-detail dd { margin: 0; color: var(--ink); word-break: break-word; }
 .result-note { color: var(--muted); font-size: .9rem; margin: 12px 0 0; }
+
+/* Detailed per-flag reasons (why a field flagged / what to check / citation). */
+.result-reason { margin: 14px 0 0; padding: 12px 14px; background: var(--surface-sunken);
+  border-radius: 8px; border: 1px solid var(--border); font-size: .92rem; }
+.result-reason p { margin: 0 0 6px; }
+.result-reason p:last-child { margin-bottom: 0; }
+.reason-cite { color: var(--muted); font-size: .85rem; }
+
+/* Batch table: an expandable reasons row beneath an attention row. */
+.reason-row td { padding: 0 14px 12px; }
+.batch-reason { padding: 10px 12px; border-left: 4px solid var(--border-strong);
+  background: var(--surface-sunken); border-radius: 6px; margin-top: 6px; font-size: .9rem; }
+.batch-reason.flag { border-left-color: var(--flag); }
+.batch-reason.review { border-left-color: var(--review); }
+.batch-reason p { margin: 0 0 4px; }
+.batch-reason p:last-child { margin-bottom: 0; }
+.batch-reason .reason-check { color: var(--ink-soft); }
+.batch-reason .reason-cite { color: var(--muted); font-size: .82rem; }
 
 .recheck { margin-top: 30px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow-sm); }
 .recheck h2 { margin: 0; font-size: 1.25rem; }

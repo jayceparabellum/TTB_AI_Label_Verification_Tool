@@ -190,9 +190,12 @@ every change.
   - **Image** — drag/drop, pick, or **paste** (clipboard screenshot) a label, then
     give the claimed brand/ABV → `verify_label`. A "Verify this label" chip auto-suggests.
   - **Text** — paste or type the label wording → `verify_text` (wraps `reverify_text`).
-  - **Batch** — attach a mapping **CSV + images**, Approve at the confirm gate →
-    `batch_verify` over `run_batch` (25-label cap), streamed summary + flagged list +
-    a **downloadable results CSV**.
+  - **Batch** — attach a mapping **CSV + images, or a `.zip` of up to 25 label photos**
+    (unzipped server-side, in memory), Approve at the confirm gate → `batch_verify` over
+    `run_batch` (25-label cap), streamed summary + flagged list + a **downloadable results
+    CSV**. The same `.zip` ingest works on the dedicated `/batch` page; both surfaces share
+    one extractor (`app/ingest.py`), so behavior is identical. Over-25 zips are **rejected**
+    with a clear message rather than silently truncated.
 
   Uploads live **in-process only** (no disk, no PII at rest), are bounded by per-file
   (10 MB) and per-thread (50 MB) caps, and are **evicted** when the chat is closed

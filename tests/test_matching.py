@@ -105,11 +105,24 @@ def test_warning_title_case_fails():
     assert "ALL CAPS" in res.found
 
 
-def test_warning_altered_wording_fails():
+def test_warning_drastically_altered_wording_flags_confidently():
+    # Wording that is clearly, substantially wrong (well below the review floor)
+    # is a confident FLAG.
+    altered = ("GOVERNMENT WARNING: This beverage is healthy and completely safe for "
+               "everyone, including during pregnancy and before driving.")
+    res = match_government_warning(altered)
+    assert res.passed is False and res.inconclusive is False
+    assert "wording" in res.detail.lower()
+
+
+def test_warning_minor_alteration_defers_to_review():
+    # A small wording change scores ~98% — indistinguishable from OCR noise on a
+    # compliant label — so it DEFERS to a human (NEEDS REVIEW) rather than a
+    # confident FLAG. Safe by construction: a deferral is never a wrong PASS, and a
+    # human still catches the alteration. (Six Sigma false-flag fix, 2026-06-19.)
     altered = OFFICIAL_GOVERNMENT_WARNING.replace("birth defects", "birth defects and harm")
     res = match_government_warning(altered)
-    assert res.passed is False
-    assert "wording" in res.detail.lower()
+    assert res.passed is False and res.inconclusive is True
 
 
 def test_warning_tolerates_minor_ocr_noise():
@@ -130,11 +143,12 @@ def test_warning_unreadable_region_is_inconclusive_not_flag():
 
 
 def test_warning_readable_but_wrong_still_flags_confidently():
-    # A readable warning that is genuinely wrong (Title case, altered wording)
-    # stays a confident FLAG — not a deferral.
+    # Unambiguous violations stay a confident FLAG (not a deferral): a clearly-read
+    # Title-case header (a structural casing violation) and drastically-wrong wording.
     titled = OFFICIAL_GOVERNMENT_WARNING.replace("GOVERNMENT WARNING:", "Government Warning:")
-    altered = OFFICIAL_GOVERNMENT_WARNING.replace("birth defects", "birth defects and harm")
-    for bad in (titled, altered):
+    drastic = ("GOVERNMENT WARNING: This beverage is healthy and completely safe for "
+               "everyone, including during pregnancy and before driving.")
+    for bad in (titled, drastic):
         res = match_government_warning(bad)
         assert res.passed is False
         assert res.inconclusive is False
