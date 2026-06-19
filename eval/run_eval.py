@@ -23,6 +23,7 @@ import numpy as np  # noqa: E402
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont  # noqa: E402
 
 from app.reference import OFFICIAL_GOVERNMENT_WARNING  # noqa: E402
+from app.samples import SAMPLES_DIR  # noqa: E402
 from app.verify import verify_label  # noqa: E402
 from eval.cases import CLEAN_CASES, DEGRADED_SPECS, EvalCase  # noqa: E402
 
@@ -76,7 +77,7 @@ IMAGES = Path(__file__).resolve().parent / "images"
 
 
 def _ensure_samples() -> None:
-    if not (ROOT / "app/static/samples/clean_pass.png").exists():
+    if not (SAMPLES_DIR / "clean_pass.png").exists():
         import scripts.generate_samples as g
 
         g.main()
@@ -124,7 +125,7 @@ def _noise(base: Image.Image) -> Image.Image:
 def _make_degraded() -> list[EvalCase]:
     """Create distorted copies of the compliant clean_pass label."""
     IMAGES.mkdir(parents=True, exist_ok=True)
-    base = Image.open(ROOT / "app/static/samples/clean_pass.png").convert("RGB")
+    base = Image.open(SAMPLES_DIR / "clean_pass.png").convert("RGB")
     cases = []
     for name, mode in DEGRADED_SPECS:
         img = base
@@ -259,7 +260,7 @@ def _run(case: EvalCase):
     if not r.readable:
         return {"readable": False, "needs_review": True, "ms": r.elapsed_ms,
                 "got": (None, None, None), "exp": exp}
-    got = {f.field: f.passed for f in r.fields}
+    got = r.verdicts
     return {"readable": True, "needs_review": r.needs_review, "ms": r.elapsed_ms,
             "got": (got["brand"], got["alcohol_content"], got["government_warning"]),
             "exp": exp}

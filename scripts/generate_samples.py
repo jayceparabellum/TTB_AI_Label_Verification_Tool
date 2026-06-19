@@ -11,27 +11,26 @@ Run:  python scripts/generate_samples.py
 
 from __future__ import annotations
 
+import sys
 import textwrap
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-OUT_DIR = Path(__file__).resolve().parent.parent / "app" / "static" / "samples"
+# Make `app` importable when this script is run standalone (python scripts/...).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from app.reference import OFFICIAL_GOVERNMENT_WARNING  # noqa: E402
+from app.samples import SAMPLES_DIR  # noqa: E402
+
+OUT_DIR = SAMPLES_DIR                      # single source of truth for the samples path
 FONT_DIR = Path("/usr/share/fonts/truetype/dejavu")
 
-OFFICIAL_WARNING = (
-    "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not "
-    "drink alcoholic beverages during pregnancy because of the risk of birth "
-    "defects. (2) Consumption of alcoholic beverages impairs your ability to "
-    "drive a car or operate machinery, and may cause health problems."
-)
-# Same wording, but Title Case header + sentence case body -> must FAIL strict.
-TITLECASE_WARNING = (
-    "Government Warning: (1) According to the Surgeon General, women should not "
-    "drink alcoholic beverages during pregnancy because of the risk of birth "
-    "defects. (2) Consumption of alcoholic beverages impairs your ability to "
-    "drive a car or operate machinery, and may cause health problems."
-)
+# The official warning lives in app.reference — import it rather than keep a copy.
+OFFICIAL_WARNING = OFFICIAL_GOVERNMENT_WARNING
+# Same wording, Title-Case header -> must FAIL strict. Derived, not a parallel copy.
+TITLECASE_WARNING = OFFICIAL_GOVERNMENT_WARNING.replace(
+    "GOVERNMENT WARNING:", "Government Warning:")
 
 W, H = 1000, 700
 
