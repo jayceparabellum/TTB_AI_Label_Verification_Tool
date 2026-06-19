@@ -1,6 +1,6 @@
 ---
 title: "feat: ZIP-folder ingestion for batch verification (page + assistant) + fix 25→~4 truncation"
-status: active
+status: completed
 date: 2026-06-19
 depth: standard
 type: feat
