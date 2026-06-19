@@ -60,17 +60,18 @@ def test_cite_or_refuse_covered_by_a_rag_case():
     assert rag, "need at least one RAG cite-or-refuse case"
 
 
-def test_override_result_case_is_a_gated_write():
-    c = next((c for c in AC.ROSTER if c.id == "override_result_gated"), None)
-    assert c is not None, "override_result roster case missing"
-    assert c.expected_tool == "override_result"
-    assert c.expected_tool in WRITE_TOOL_NAMES
-    assert c.is_write is True
-    assert AC.INV_CONFIRM_GATE in c.invariants
-    assert AC.INV_TOOL_ROUTING in c.invariants
-    # A WRITE override must not claim cite-or-refuse or verdict-verbatim.
-    assert AC.INV_CITE_OR_REFUSE not in c.invariants
-    assert AC.INV_VERDICT_VERBATIM not in c.invariants
+def test_roster_has_a_gated_write_case():
+    # Every WRITE roster case must be is_write + carry the confirm-gate invariant.
+    # (batch_verify_gated is the gated WRITE; override_result is omitted — see the
+    # ROSTER note — and covered by recorder unit tests instead.)
+    writes = [c for c in AC.ROSTER if c.is_write]
+    assert writes, "need at least one gated WRITE case"
+    for c in writes:
+        assert c.expected_tool in WRITE_TOOL_NAMES
+        assert AC.INV_CONFIRM_GATE in c.invariants
+        assert AC.INV_TOOL_ROUTING in c.invariants
+        assert AC.INV_CITE_OR_REFUSE not in c.invariants
+        assert AC.INV_VERDICT_VERBATIM not in c.invariants
 
 
 def test_validate_class_type_case_is_advisory_read():

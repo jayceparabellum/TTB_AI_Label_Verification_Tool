@@ -94,9 +94,15 @@ def test_write_case_records_interrupt_then_resume():
 
 
 def test_override_result_write_records_interrupt_then_resume():
-    """The override_result WRITE case records the confirm-gate interrupt before the
-    tool executes, and the post-approve resume captures the override result."""
-    case = _case("override_result_gated")
+    """The override_result WRITE records the confirm-gate interrupt before the tool
+    executes, and the post-approve resume captures the override result. Built inline
+    (override_result is not a live roster case — see the ROSTER note) to exercise
+    recorder mechanics on a WRITE other than batch_verify."""
+    case = AC.AgentEvalCase(
+        id="override_result_inline", message="override that flagged result to PASS",
+        expected_tool="override_result",
+        invariants=frozenset({AC.INV_TOOL_ROUTING, AC.INV_CONFIRM_GATE}),
+        is_write=True, thread_id="t-override")
     llm = _Call(
         "override_result",
         {"result_id": "r1", "new_status": "PASS",

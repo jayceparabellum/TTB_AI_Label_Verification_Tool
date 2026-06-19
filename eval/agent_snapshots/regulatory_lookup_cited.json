@@ -29,7 +29,7 @@
           "caller": {
             "type": "direct"
           },
-          "id": "toolu_01VueKNP5fqhPvNTSCqepkgS",
+          "id": "toolu_01SY8JQwkXRvmTytaYuPDeN9",
           "input": {
             "beverage_type": "beer",
             "question": "What is the government health warning required on a beer label?"
@@ -74,7 +74,7 @@
           "caller": {
             "type": "direct"
           },
-          "id": "toolu_01Q5vbmPErPaeCDywQoYzbFw",
+          "id": "toolu_01T2tDtZ6dnArgu7KqML5Lod",
           "input": {
             "beverage_type": "beer",
             "question": "What is the exact text of the government health warning statement in 27 CFR 16.21?"
@@ -87,29 +87,16 @@
     {
       "kind": "tool_result",
       "result": {
-        "answer": "Based only on the regulations on file:\n\n27 CFR 16.20(a) \u2014 Any person who manufactures, imports, or bottles alcoholic beverages for sale or distribution in the United States must ensure that the container bears the Government health warning statement set out in 27 CFR 16.21. The requirement applies to all alcoholic beverages, including wine, distilled spirits, and malt beverages.\n\n27 CFR 16.22(a) \u2014 The health warning statement must be readily legible, appear on a contrasting background, and be separate and apart from other information. The words 'GOVERNMENT WARNING' must appear in capital letters and in bold type. The remainder of the statement may not appear in bold.",
-        "citations": [
-          {
-            "beverage_type": "all",
-            "citation": "27 CFR 16.20(a)",
-            "section": "16.20",
-            "source_url": "https://www.ecfr.gov/current/title-27/section-16.20"
-          },
-          {
-            "beverage_type": "all",
-            "citation": "27 CFR 16.22(a)",
-            "section": "16.22",
-            "source_url": "https://www.ecfr.gov/current/title-27/section-16.22"
-          }
-        ],
-        "status": "answered"
+        "answer": "Not found in the regulations on file.",
+        "citations": [],
+        "status": "refused"
       },
       "tool": "regulatory_lookup"
     },
     {
       "args": {
         "beverage_type": "beer",
-        "question": "What are the four specific health warnings listed in 27 CFR 16.21?"
+        "question": "What does 27 CFR 16.21 say about the health warning?"
       },
       "kind": "tool_call",
       "tool": "regulatory_lookup"
@@ -118,17 +105,17 @@
       "kind": "message",
       "text": [
         {
-          "text": "Let me get the specific warning text:",
+          "text": "Let me try a different approach:",
           "type": "text"
         },
         {
           "caller": {
             "type": "direct"
           },
-          "id": "toolu_01Np4hr4WymnQwfYbCYwBpuN",
+          "id": "toolu_013pQ1RhZY3mT9kN8D2d7tH6",
           "input": {
             "beverage_type": "beer",
-            "question": "What are the four specific health warnings listed in 27 CFR 16.21?"
+            "question": "What does 27 CFR 16.21 say about the health warning?"
           },
           "name": "regulatory_lookup",
           "type": "tool_use"
@@ -138,22 +125,15 @@
     {
       "kind": "tool_result",
       "result": {
-        "answer": "Based only on the regulations on file:\n\n27 CFR 16.20(a) \u2014 Any person who manufactures, imports, or bottles alcoholic beverages for sale or distribution in the United States must ensure that the container bears the Government health warning statement set out in 27 CFR 16.21. The requirement applies to all alcoholic beverages, including wine, distilled spirits, and malt beverages.",
-        "citations": [
-          {
-            "beverage_type": "all",
-            "citation": "27 CFR 16.20(a)",
-            "section": "16.20",
-            "source_url": "https://www.ecfr.gov/current/title-27/section-16.20"
-          }
-        ],
-        "status": "answered"
+        "answer": "Not found in the regulations on file.",
+        "citations": [],
+        "status": "refused"
       },
       "tool": "regulatory_lookup"
     },
     {
       "kind": "message",
-      "text": "Based on the regulations on file (**27 CFR 16.20(a) and 16.21**), here's what the government health warning on a beer label must say:\n\n**Required Elements:**\n\nThe label must bear a **Government health warning statement** that includes four specific warnings about:\n\n1. **Pregnancy risks** \u2014 warning about alcohol consumption during pregnancy\n2. **Impairment** \u2014 warning about operating machinery or driving\n3. **Health risks** \u2014 warning about health hazards from alcohol consumption\n4. **Addiction** \u2014 warning about the potential for addiction\n\n**Formatting Requirements (27 CFR 16.22(a)):**\n\n- The words **\"GOVERNMENT WARNING\"** must appear in **ALL CAPITALS and bold type**\n- The remainder of the statement may NOT be in bold\n- The warning must be **readily legible** and appear on a **contrasting background**\n- It must be **separate and apart** from other label information\n\nThe exact wording of all four warnings is specified in the regulation. If you need to verify a specific beer label's warning against this standard, I can check it for you\u2014just upload the label image or provide the warning text you see on the label."
+      "text": "Based on the regulatory lookup, here's what I can tell you:\n\n**The Requirement:**\nUnder **27 CFR 16.20(a)**, any beer label sold or distributed in the United States **must** include the Government health warning statement as specified in **27 CFR 16.21**.\n\nThe regulation applies to all alcoholic beverages, including beer (malt beverages).\n\nUnfortunately, the specific exact wording of the warning statement itself isn't available in my current regulatory corpus. However, the verification tools I have can check whether a beer label's warning meets the 27 CFR 16.21 standard.\n\n**If you have a beer label to check**, I can:\n- Verify the warning text against the regulation using the `verify_warning` function (if you have an image loaded), or\n- Check the warning as part of a full label verification\n\nWould you like me to verify a specific beer label's warning, or do you have other questions about beer label requirements?"
     }
   ]
 }

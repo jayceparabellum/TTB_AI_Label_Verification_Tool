@@ -17,9 +17,11 @@
   ],
   "is_write": true,
   "judge": {
+    "actionability": 4,
+    "calibration": 5,
     "clarity": 5,
     "faithfulness": 5,
-    "justification": "Assistant accurately reports all three results (1 passed, 2 flagged, 0 needs_review) with clear, actionable descriptions of what failed without inventing details or softening the verdict."
+    "justification": "Verdict reported accurately (2 flagged, 1 passed); clear plain language; offers next steps (extract text or explain violations) but could specify *which* regulatory requirement each flag violated for maximum actionability."
   },
   "transcript": [
     {
@@ -38,7 +40,7 @@
           "caller": {
             "type": "direct"
           },
-          "id": "toolu_013HLktYw2XQzAjp6XSpYn4Z",
+          "id": "toolu_01JhTF6uD8em1MmJR4CKDJnQ",
           "input": {},
           "name": "batch_verify",
           "type": "tool_use"
@@ -79,7 +81,7 @@
           "caller": {
             "type": "direct"
           },
-          "id": "toolu_01X3JpZ4TKecjuejdugryfe5",
+          "id": "toolu_014bYaz5BZKNYAQsQZ1jNpSo",
           "input": {},
           "name": "list_flagged",
           "type": "tool_use"

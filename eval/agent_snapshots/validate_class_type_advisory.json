@@ -1,0 +1,63 @@
+{
+  "case_id": "validate_class_type_advisory",
+  "expected_tool": "validate_class_type",
+  "ground_truth": null,
+  "inputs": {},
+  "invariants": [
+    "tool_routing"
+  ],
+  "is_write": false,
+  "judge": null,
+  "transcript": [
+    {
+      "args": {
+        "beverage_type": "wine",
+        "claimed_designation": "Meritage"
+      },
+      "kind": "tool_call",
+      "tool": "validate_class_type"
+    },
+    {
+      "kind": "message",
+      "text": [
+        {
+          "text": "I'll check that designation against the standards of identity for wine.",
+          "type": "text"
+        },
+        {
+          "caller": {
+            "type": "direct"
+          },
+          "id": "toolu_01UeqfzJU3761MqKT1CA1Bxd",
+          "input": {
+            "beverage_type": "wine",
+            "claimed_designation": "Meritage"
+          },
+          "name": "validate_class_type",
+          "type": "tool_use"
+        }
+      ]
+    },
+    {
+      "kind": "tool_result",
+      "result": {
+        "advisory": true,
+        "assessment": "'Meritage' is not a simple recognized class/type \u2014 recommend human review against the standards of identity. This is advisory; it is never an auto-rejection.",
+        "citations": [
+          {
+            "beverage_type": "wine",
+            "citation": "27 CFR 4.34(a)",
+            "section": "4.34",
+            "source_url": "https://www.ecfr.gov/current/title-27/section-4.34"
+          }
+        ],
+        "status": "REVIEW"
+      },
+      "tool": "validate_class_type"
+    },
+    {
+      "kind": "message",
+      "text": "**Status: REVIEW RECOMMENDED**\n\n\"Meritage\" is **not** a simple, recognized standard of identity under 27 CFR 4.34(a). The system flags it as advisory\u2014meaning it requires **human review** before approval, but it is **not an automatic rejection**.\n\n**What this means:**\n- The label cannot simply claim \"Meritage\" without additional scrutiny.\n- A human compliance officer should verify that the wine meets the specific requirements for that designation (typically a proprietary blend meeting certain criteria set by the Meritage Association).\n- The controlling regulation is **27 CFR 4.34(a)**, which governs class and type designations for wine.\n\n**Next step:** Have a human reviewer examine the full label to confirm the wine qualifies for the Meritage designation under the applicable standards before marking it compliant."
+    }
+  ]
+}

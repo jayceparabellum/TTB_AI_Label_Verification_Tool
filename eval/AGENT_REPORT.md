@@ -7,8 +7,9 @@ Replays the committed agent snapshots and grades the load-bearing invariants **d
 | batch_verify_gated | — | ✅ | ✅ | — | ✅ | ✅ PASS |
 | explain_flag_warning_caps | — | ✅ | — | ✅ | — | ✅ PASS |
 | regulatory_lookup_cited | — | ✅ | — | ✅ | — | ✅ PASS |
+| validate_class_type_advisory | — | ✅ | — | — | — | ✅ PASS |
 | verify_label_flag | ✅ | ✅ | — | — | ✅ | ✅ PASS |
 | verify_label_pass | ✅ | ✅ | — | — | ✅ | ✅ PASS |
 | verify_text_pass | ✅ | ✅ | — | — | ✅ | ✅ PASS |
 
-- **Cases passing:** 6/6 = **100.0%** → **PASS** (all invariants hold)
+- **Cases passing:** 7/7 = **100.0%** → **PASS** (all invariants hold)

@@ -3,7 +3,7 @@
   "expected_tool": "verify_label",
   "ground_truth": {
     "confidence": 95,
-    "elapsed_ms": 202,
+    "elapsed_ms": 200,
     "fields": [
       {
         "detail": "similarity 100/100 (threshold 95)",
@@ -47,9 +47,11 @@
   ],
   "is_write": false,
   "judge": {
+    "actionability": 5,
+    "calibration": 4,
     "clarity": 5,
     "faithfulness": 5,
-    "justification": "Assistant reports the PASS verdict faithfully with no hedging, and presents verification details in a clear, actionable table format that a non-technical compliance agent can immediately understand and act upon."
+    "justification": "Faithfully reports PASS verdict with clear field-by-field breakdown and appropriate next-step guidance (none needed); minor calibration deduction for stating 95% confidence when deterministic verdict should be binary, though this doesn't undermine the core message."
   },
   "transcript": [
     {
@@ -71,7 +73,7 @@
           "caller": {
             "type": "direct"
           },
-          "id": "toolu_018At7PUvi1JnPdeicePmTnc",
+          "id": "toolu_01EqK7NMRST7y8B9x7yC1Egy",
           "input": {
             "alcohol_content": "5.0%",
             "brand": "Stone's Throw"
@@ -85,7 +87,7 @@
       "kind": "tool_result",
       "result": {
         "confidence": 95,
-        "elapsed_ms": 284,
+        "elapsed_ms": 255,
         "fields": [
           {
             "detail": "similarity 100/100 (threshold 95)",
@@ -121,7 +123,7 @@
     },
     {
       "kind": "message",
-      "text": "**\u2713 PASS**\n\nThe loaded label for **Stone's Throw at 5.0% ABV** has been verified and **passes all compliance checks**:\n\n| Field | Result | Details |\n|-------|--------|---------|\n| **Brand name** | \u2713 PASS | \"Stone's Throw\" matches exactly (100% similarity) |\n| **Alcohol content** | \u2713 PASS | 5% ABV matches the claimed 5.0% |\n| **Government warning** | \u2713 PASS | Official warning present with correct wording and ALL CAPS formatting per 27 CFR 16.21 |\n\n**Overall confidence:** 95%  \n**Status:** No further review needed."
+      "text": "**\u2713 PASS**\n\nThe Stone's Throw label at 5.0% ABV has been verified and **passes all compliance checks**:\n\n| Field | Result | Details |\n|-------|--------|---------|\n| **Brand name** | \u2713 PASS | \"Stone's Throw\" matches exactly (100% similarity) |\n| **Alcohol content** | \u2713 PASS | 5% ABV matches the claimed 5.0% |\n| **Government warning** | \u2713 PASS | Official warning present with correct wording and ALL CAPS formatting per 27 CFR 16.21 |\n\n**Overall confidence:** 95%  \n**Status:** No further review needed."
     }
   ]
 }

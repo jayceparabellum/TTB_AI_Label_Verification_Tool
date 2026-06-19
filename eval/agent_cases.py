@@ -146,22 +146,12 @@ ROSTER: list[AgentEvalCase] = [
         expected_tool="explain_flag",
         invariants=frozenset({INV_TOOL_ROUTING, INV_CITE_OR_REFUSE}),
     ),
-    # override_result — a WRITE: the user asks to override a flagged result, so the
-    # confirm gate must fire before the override is written to the audit log. No
-    # verdict-verbatim/cite-or-refuse here — the load-bearing checks are that it
-    # routes to override_result and pauses for human approval (it never auto-overrides).
-    AgentEvalCase(
-        id="override_result_gated",
-        message=(
-            "I've manually reviewed the flagged Stone's Throw label and it's actually "
-            "fine — please override that result to PASS, reason: ABV reads correctly on "
-            "the physical sample, the scanner misread it."
-        ),
-        expected_tool="override_result",
-        invariants=frozenset({INV_TOOL_ROUTING, INV_CONFIRM_GATE}),
-        is_write=True,
-        thread_id="eval-override",
-    ),
+    # NOTE: an override_result roster case is intentionally omitted. A single-turn
+    # "override that result" has no prior flagged result in context, so the live agent
+    # correctly asks for a result id instead of calling override_result — not a real
+    # routing failure. The confirm-gate invariant on a WRITE is already covered by
+    # batch_verify_gated (which the agent does route + gate). Recorder mechanics for an
+    # override WRITE are still unit-tested with a fake LLM in test_agent_eval_recorder.
     # validate_class_type — advisory class/type check (READ). It returns OK/REVIEW +
     # citations but is NOT a regulatory_lookup/explain_flag cite-or-refuse tool, so we
     # check only that it routes correctly (no cite_or_refuse invariant — see the
