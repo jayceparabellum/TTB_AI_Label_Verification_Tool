@@ -33,6 +33,28 @@ app = FastAPI(title="TTB Label Verification", docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
+# Security response headers on every response. CSP is tuned to what this app uses:
+# scripts only from our own origin (no inline JS — the print button uses a listener,
+# not onclick); inline styles are allowed (a few trivial style= attributes, low risk);
+# images allow data: URIs (label thumbnails). object/base/frame-ancestors locked down.
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Content-Security-Policy": (
+        "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
+        "script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"),
+}
+
+
+@app.middleware("http")
+async def _security_headers(request: Request, call_next):
+    response = await call_next(request)
+    for name, value in _SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+    return response
+
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
@@ -263,7 +285,13 @@ async def verify(
     alcohol_content: str = Form(...),
     expected_warning: str = Form(OFFICIAL_GOVERNMENT_WARNING),
 ):
-    image_bytes = await label_image.read()
+    # Read at most one byte past the cap so an oversized upload can't exhaust memory.
+    image_bytes = await label_image.read(_MAX_FILE_BYTES + 1)
+    if len(image_bytes) > _MAX_FILE_BYTES:
+        return _render_result(
+            request, None, brand, alcohol_content,
+            error="That image is larger than the 10 MB limit. Please upload a smaller file.",
+            status_code=413)
     if not image_bytes:
         return _render_result(
             request, None, brand, alcohol_content,
