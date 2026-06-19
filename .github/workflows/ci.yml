@@ -1,0 +1,75 @@
+name: CI
+
+# Runs the credit-free quality gates on every push / PR:
+#   1. the full pytest suite (verifier core, matching, RAG golden + faithfulness,
+#      agent-eval graders, optimization harness, security headers) — the suite is
+#      pinned BM25-only by tests/conftest.py (RAG_DENSE="off"), the same retrieval
+#      regime production/Render runs, so no embedding model is needed;
+#   2. the agent-behavior GATE — replays the committed snapshots and grades the
+#      load-bearing invariants. Replay touches NO model and spends NO credits
+#      (the LLM-judge ran once at record time and is baked into the snapshots);
+#   3. pip-audit over the pinned requirements — the dependency-CVE gate.
+# None of these construct an LLM or reach the network, so CI needs no API key.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: tests + agent-eval gate
+    runs-on: ubuntu-latest
+    env:
+      # Belt-and-suspenders: pin the production BM25-only regime even outside the
+      # pytest autouse fixture (the agent gate replays snapshots and never builds
+      # a model, but this keeps any direct retrieval path off the dense backend).
+      RAG_DENSE: "off"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Tesseract (OCR runtime for pytesseract)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr fonts-dejavu-core
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run test suite
+        run: python -m pytest -q
+
+      - name: Agent-behavior gate (snapshot replay — no LLM, no credits)
+        run: python eval/run_agent_eval.py gate
+
+  audit:
+    name: dependency CVE audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+
+      - name: Audit pinned requirements
+        # Fails the job on any KNOWN advisory against a pinned dep. Not --strict:
+        # resolution warnings (e.g. an optional dep absent from the file) must not
+        # fail the gate — only real CVEs should.
+        run: pip-audit -r requirements.txt
