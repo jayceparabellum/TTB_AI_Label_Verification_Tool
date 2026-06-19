@@ -16,11 +16,14 @@ import zipfile
 
 from app.batch import BATCH_MAX_LABELS
 
-# The image extensions a batch accepts (mirrors _IMAGE_EXTS in app/main.py).
+# The image extensions a batch accepts. Canonical here; app/main.py imports these
+# (and MAX_FILE_BYTES) so the upload policy lives in one place.
 IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff")
 
-# Uncompressed-size guards (mirror the per-file / per-thread upload caps in app/main.py).
-MAX_MEMBER_BYTES = 10 * 1024 * 1024        # 10 MB per extracted image
+# Uncompressed-size guards. MAX_FILE_BYTES is the shared per-image cap; MAX_TOTAL_BYTES
+# is the per-archive ceiling (a distinct concept from main's per-thread cumulative cap,
+# which happens to share the same value).
+MAX_FILE_BYTES = 10 * 1024 * 1024          # 10 MB per extracted image
 MAX_TOTAL_BYTES = 50 * 1024 * 1024         # 50 MB total uncompressed per archive
 
 
@@ -46,7 +49,7 @@ def extract_images_from_zip(
     zip_bytes: bytes,
     *,
     max_files: int = BATCH_MAX_LABELS,
-    max_member_bytes: int = MAX_MEMBER_BYTES,
+    max_member_bytes: int = MAX_FILE_BYTES,
     max_total_bytes: int = MAX_TOTAL_BYTES,
 ) -> list[tuple[str, bytes]]:
     """Return [(basename, bytes)] for every image in the zip, by original filename.

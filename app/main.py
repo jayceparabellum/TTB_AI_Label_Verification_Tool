@@ -101,9 +101,9 @@ def agent_resume(thread_id: str = Form(...), decision: str = Form(...)):
 # In-chat upload: stash an uploaded label image in the session so the assistant can
 # verify it (not just the seeded samples). Bytes live in-process only (no disk, no
 # PII); the chat then references the returned id. Caps keep a public demo bounded.
-_MAX_FILE_BYTES = 10 * 1024 * 1024          # 10 MB per file
-_MAX_THREAD_BYTES = 50 * 1024 * 1024        # 50 MB cumulative per chat thread
-_IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff")
+_MAX_FILE_BYTES = ingest.MAX_FILE_BYTES     # 10 MB per file (canonical in app/ingest)
+_MAX_THREAD_BYTES = 50 * 1024 * 1024        # 50 MB cumulative per chat thread (distinct concept)
+_IMAGE_EXTS = ingest.IMAGE_EXTS             # shared accepted-image extensions
 
 
 def _thread_bytes(thread_id: str) -> int:
@@ -115,11 +115,22 @@ def _thread_bytes(thread_id: str) -> int:
     return image_bytes + len(entry.get("batch_csv") or b"")
 
 
+def _stage_image(thread_id: str, name: str, data: bytes) -> str:
+    """Stash one image in the session and stage it as a batch candidate (by its
+    original filename, so a CSV batch can match it). Returns the image id. Shared by
+    the loose-image and unzipped-image upload paths so they can't drift."""
+    from agent.images import STORE, STAGING
+    image_id = STORE.put(data)
+    STAGING.add_image(thread_id, image_id)
+    STAGING.add_batch_image(thread_id, name, data)
+    return image_id
+
+
 @app.post("/agent/upload")
 async def agent_upload(thread_id: str = Form(...), files: list[UploadFile] = File(...)):
     """Accept files dropped/picked in the chat. Images are stashed for verification;
     other types get a friendly rejection. Returns one item per file."""
-    from agent.images import STORE, STAGING
+    from agent.images import STAGING
 
     items = []
     used = _thread_bytes(thread_id)
@@ -144,9 +155,7 @@ async def agent_upload(thread_id: str = Form(...), files: list[UploadFile] = Fil
                               "reason": "this chat has reached its 50 MB upload limit"})
                 continue
             for img_name, img_bytes in extracted:
-                image_id = STORE.put(img_bytes)
-                STAGING.add_image(thread_id, image_id)
-                STAGING.add_batch_image(thread_id, img_name, img_bytes)
+                _stage_image(thread_id, img_name, img_bytes)
             used += total
             items.append({"kind": "zip", "name": name, "extracted": len(extracted)})
             continue
@@ -159,10 +168,7 @@ async def agent_upload(thread_id: str = Form(...), files: list[UploadFile] = Fil
                           "reason": "this chat has reached its 50 MB upload limit"})
             continue
         if ct.startswith("image/") or lname.endswith(_IMAGE_EXTS):
-            image_id = STORE.put(data)
-            STAGING.add_image(thread_id, image_id)
-            # Also stage by original filename so a CSV batch can match it by name.
-            STAGING.add_batch_image(thread_id, name, data)
+            image_id = _stage_image(thread_id, name, data)
             used += len(data)
             items.append({"kind": "image", "id": image_id, "name": name})
         elif ct in ("text/csv", "application/vnd.ms-excel") or lname.endswith(".csv"):
