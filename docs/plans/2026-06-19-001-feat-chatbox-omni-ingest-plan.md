@@ -1,11 +1,20 @@
 ---
 title: "feat: Chatbox omni-ingest — image / text / CSV batch verification entirely in-chat"
-status: planned
+status: implemented
 date: 2026-06-19
 depth: deep
 branch: feat/chatbox-omni-ingest
 scope_source: PM scoping pass over the conversational-agent codebase (this session)
 ---
+
+> **Implemented 2026-06-19.** All six units shipped across four PRs:
+> - **U1–U3** (staging store, `POST /agent/upload`, in-chat image verify) — PR #18 (merged).
+> - **U4** (`verify_text` tool + in-chat text verify, M3) — PR #19.
+> - **U5** (uploaded-batch `batch_verify` over `run_batch`, streamed summary + results-CSV download, M4) — PR #20.
+> - **U6** (S1–S4: clickable "Verify this label" auto-suggest, clipboard paste, per-thread byte cap counting the staged CSV, Close/reset eviction) — PR #21.
+>
+> U4→U5→U6 form a stack (each based on the prior branch); merge order #19 → #20 → #21.
+> Full test suite: 182 passed. Browser/manual demo per slice still pending.
 
 # feat: Chatbox omni-ingest — one-stop label verification inside the chat widget
 
