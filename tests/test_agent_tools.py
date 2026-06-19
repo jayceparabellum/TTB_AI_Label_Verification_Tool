@@ -50,12 +50,12 @@ def _run_tool(name, args, image="clean_pass", thread="t"):
 
 
 def test_roster_shape():
-    assert len(T.ALL_TOOLS) == 11
+    assert len(T.ALL_TOOLS) == 12
     assert T.WRITE_TOOL_NAMES == {"override_result", "manual_fallback", "batch_verify"}
     names = {t.name for t in T.ALL_TOOLS}
     assert {"verify_label", "verify_text", "extract_label_fields", "verify_warning",
             "list_flagged", "regulatory_lookup", "explain_flag",
-            "validate_class_type"} <= names
+            "validate_class_type", "export_audit_log"} <= names
 
 
 def test_read_tools_flow_through_without_interrupt():

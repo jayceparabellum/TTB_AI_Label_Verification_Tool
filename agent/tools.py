@@ -16,6 +16,7 @@ from langchain_core.tools import tool
 from langgraph.prebuilt import InjectedState
 
 from app import ocr as _ocr
+from app import audit_export as _audit_export
 from app import batch as _batch
 from app.matching import match_government_warning as _match_warning
 from app.samples import SAMPLES as _SAMPLES
@@ -279,6 +280,27 @@ def batch_verify(state: Annotated[dict, InjectedState]) -> dict:
                 _batch.results_to_csv(LAST_BATCH).encode()).decode()}
 
 
+@tool
+def export_audit_log() -> dict:
+    """Export the FULL append-only audit log as downloadable files. Returns every
+    recorded write (override, manual entry) with all fields, as BOTH a CSV and an
+    Excel (.xlsx) workbook, base64-encoded for download. This is a plain READ — it
+    is not gated and does not itself create an audit entry. Use it whenever the user
+    asks to export, download, or save the audit log / decision history."""
+    rows = audit.all_rows()
+    csv_text = _audit_export.audit_to_csv(rows)
+    xlsx_bytes = _audit_export.audit_to_xlsx(rows)
+    return {
+        "count": len(rows),
+        "downloads": [
+            {"filename": "audit_log.csv",
+             "b64": base64.b64encode(csv_text.encode()).decode()},
+            {"filename": "audit_log.xlsx",
+             "b64": base64.b64encode(xlsx_bytes).decode()},
+        ],
+    }
+
+
 _KNOWN_WINE_TYPES = {
     "table wine", "red wine", "white wine", "rose wine", "rosé wine",
     "sparkling wine", "dessert wine", "fortified wine",
@@ -306,7 +328,8 @@ def validate_class_type(claimed_designation: str, beverage_type: str = "wine") -
 
 
 READ_TOOLS = [verify_label, verify_text, extract_label_fields, verify_warning,
-              list_flagged, regulatory_lookup, explain_flag, validate_class_type]
+              list_flagged, regulatory_lookup, explain_flag, validate_class_type,
+              export_audit_log]
 WRITE_TOOLS = [override_result, manual_fallback, batch_verify]
 WRITE_TOOL_NAMES = {t.name for t in WRITE_TOOLS}
 ALL_TOOLS = READ_TOOLS + WRITE_TOOLS

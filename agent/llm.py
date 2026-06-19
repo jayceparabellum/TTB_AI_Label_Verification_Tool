@@ -27,6 +27,8 @@ SYSTEM_PROMPT = (
     "the value.\n"
     "- For any regulatory question, call the regulatory lookup tool and cite the "
     "rule; never recite regulations from memory.\n"
+    "- To export, download, or save the audit log / decision history, call "
+    "export_audit_log and hand back the files it returns.\n"
     "- Explain flags in plain language a non-technical agent can act on."
 )
 
