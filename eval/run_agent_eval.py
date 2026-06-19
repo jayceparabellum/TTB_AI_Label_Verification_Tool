@@ -120,14 +120,25 @@ def _grade_verdict_verbatim(snap: Snapshot) -> tuple[bool, str]:
     if want is None:
         return False, "verification result has no verdict (error/unreadable)"
     msg = _final_message(snap).upper()
-    if want not in msg:
-        return False, f"final message is missing the verdict keyword {want!r}"
-    contradicting = [w for w in VERDICT_KEYWORDS.values() if w != want and w in msg]
-    if contradicting:
-        return False, f"final message contradicts the verdict with {contradicting}"
+    # The agent states the OVERALL verdict first ("RESULT: FLAG"); a per-field
+    # breakdown table afterward legitimately contains "PASS"/"FLAG" labels for
+    # individual fields. So check the *first* verdict keyword stated equals `want`
+    # and isn't negated — robust to breakdowns, still catches a wrong/softened
+    # overall verdict. (Scanning for ANY other keyword false-fails breakdown tables.)
+    first = _first_verdict_keyword(msg)
+    if first is None:
+        return False, f"final message states no verdict keyword (want {want!r})"
+    if first != want:
+        return False, f"final message leads with {first!r}, not the verdict {want!r}"
     if _verdict_negated(msg, want):
         return False, f"verdict keyword {want!r} is negated in the final message"
     return True, f"reported {want} verbatim"
+
+
+def _first_verdict_keyword(msg: str) -> str | None:
+    """The earliest-stated verdict keyword in the (upper-cased) message, or None."""
+    found = [(msg.find(w), w) for w in VERDICT_KEYWORDS.values() if w in msg]
+    return min(found)[1] if found else None
 
 
 # A negation appearing just before the verdict keyword softens/inverts it even though

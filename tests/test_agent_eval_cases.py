@@ -52,10 +52,12 @@ def test_write_case_is_a_real_write_tool_and_gated():
         assert AC.INV_CONFIRM_GATE in c.invariants
 
 
-def test_out_of_corpus_case_present_for_refusal():
-    refused = [c for c in AC.ROSTER if c.id == "regulatory_lookup_refused"]
-    assert refused, "need an out-of-corpus -> refused case"
-    assert AC.INV_CITE_OR_REFUSE in refused[0].invariants
+def test_cite_or_refuse_covered_by_a_rag_case():
+    # cite-or-refuse is exercised by the RAG cases that answer-with-citation. An
+    # agent-level "refused" case is intentionally omitted (see ROSTER note); the
+    # tool's refuse path is unit-tested in tests/test_agent_tools.py.
+    rag = [c for c in AC.ROSTER if AC.INV_CITE_OR_REFUSE in c.invariants]
+    assert rag, "need at least one RAG cite-or-refuse case"
 
 
 def test_snapshot_round_trips_a_representative_transcript(tmp_path):
