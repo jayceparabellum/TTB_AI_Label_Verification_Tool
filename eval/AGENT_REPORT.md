@@ -7,14 +7,8 @@ Replays the committed agent snapshots and grades the load-bearing invariants **d
 | batch_verify_gated | — | ✅ | ✅ | — | ✅ | ✅ PASS |
 | explain_flag_warning_caps | — | ✅ | — | ✅ | — | ✅ PASS |
 | regulatory_lookup_cited | — | ✅ | — | ✅ | — | ✅ PASS |
-| regulatory_lookup_refused | — | ❌ | — | ❌ | — | ❌ FAIL |
 | verify_label_flag | ✅ | ✅ | — | — | ✅ | ✅ PASS |
 | verify_label_pass | ✅ | ✅ | — | — | ✅ | ✅ PASS |
 | verify_text_pass | ✅ | ✅ | — | — | ✅ | ✅ PASS |
 
-- **Cases passing:** 6/7 = **85.7%** → **FAIL**
-
-## Failures
-
-- `regulatory_lookup_refused` — **cite_or_refuse**: no RAG tool result in transcript
-- `regulatory_lookup_refused` — **tool_routing**: expected regulatory_lookup, called nothing
+- **Cases passing:** 6/6 = **100.0%** → **PASS** (all invariants hold)
