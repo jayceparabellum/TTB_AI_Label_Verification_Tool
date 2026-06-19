@@ -41,13 +41,15 @@
       </thead>
       <tbody>
         {% for row in result.rows %}
-        {%- set verdicts = {} -%}
-        {%- for f in row.fields -%}{%- set _ = verdicts.update({f.field: f.passed}) -%}{%- endfor -%}
+        {%- set fbk = {} -%}
+        {%- for f in row.fields -%}{%- set _ = fbk.update({f.field: f}) -%}{%- endfor -%}
         <tr class="{{ 'attn' if row.needs_attention else 'ok' }}">
           <td class="fn">{{ row.filename }}</td>
           {% for key in ['brand', 'alcohol_content', 'government_warning'] %}
-            {% if key in verdicts %}
-              <td><span class="cell-badge {{ 'pass' if verdicts[key] else 'flag' }}">{{ 'PASS' if verdicts[key] else 'FLAG' }}</span></td>
+            {% if key in fbk %}
+              {%- set f = fbk[key] -%}
+              {%- set st = 'pass' if f.passed else ('review' if f.inconclusive else 'flag') -%}
+              <td><span class="cell-badge {{ st }}">{{ 'PASS' if f.passed else ('REVIEW' if f.inconclusive else 'FLAG') }}</span></td>
             {% else %}
               <td class="muted">&mdash;</td>
             {% endif %}
@@ -55,6 +57,29 @@
           {%- set lbl = labels.get(row.status, (row.status, 'err')) -%}
           <td><span class="cell-badge {{ lbl[1] }}" title="{{ row.message }}">{{ lbl[0] }}</span></td>
         </tr>
+        {# Detailed reasons for every non-passing field on this row #}
+        {%- set reasons = [] -%}
+        {%- for f in row.fields if not f.passed -%}
+          {%- set r = flag_reason(f) -%}
+          {%- if r -%}{%- set _ = reasons.append((f.label, r)) -%}{%- endif -%}
+        {%- endfor -%}
+        {% if reasons %}
+        <tr class="reason-row {{ 'attn' if row.needs_attention else 'ok' }}">
+          <td colspan="5">
+            {% for label, r in reasons %}
+            <div class="batch-reason {{ r.status|lower }}">
+              <p><strong>{{ label }} &mdash; {{ r.status }}:</strong> {{ r.reason }}</p>
+              <p class="reason-check"><strong>What to check:</strong> {{ r.what_to_check }}</p>
+              {% if r.citation %}<p class="reason-cite">📖 {{ r.citation }}</p>{% endif %}
+            </div>
+            {% endfor %}
+          </td>
+        </tr>
+        {% elif row.needs_attention and row.message %}
+        <tr class="reason-row attn">
+          <td colspan="5"><div class="batch-reason flag"><p>{{ row.message }}</p></div></td>
+        </tr>
+        {% endif %}
         {% endfor %}
       </tbody>
     </table>
