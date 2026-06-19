@@ -24,6 +24,12 @@ _STOP = {
     "the", "a", "an", "of", "to", "for", "and", "or", "is", "are", "what", "does",
     "do", "need", "needs", "on", "in", "must", "be", "my", "this", "that", "it",
     "how", "can", "i", "with", "as", "at", "by", "if", "show", "me", "tell", "about",
+    # Generic interrogatives and bleached verbs carry no regulatory topical signal.
+    # Dropping them keeps coverage honest and, crucially, keeps the distinguishing-
+    # term gate from flagging a lone common verb (e.g. "put", "apply") as if it
+    # were an off-corpus subject term.
+    "who", "where", "when", "which", "put", "apply", "use", "used", "have", "has",
+    "make", "made", "get", "take", "should", "may", "will", "would", "there",
 }
 
 

@@ -80,8 +80,8 @@ def test_answer_refuses_thin_overlap_out_of_corpus():
     # corpus) that the old 0.30 floor wrongly ANSWERED; the calibrated 0.50 coverage
     # gate now refuses it. Guards the threshold from drifting lenient again.
     # (High-vocab-overlap off-corpus queries like "Serving Facts panels" / "pictorial
-    # warnings" are NOT caught by coverage alone — see RAG_MIN_CONFIDENCE note; that
-    # needs a distinguishing-term/faithfulness check, tracked as a follow-up.)
+    # warnings" are NOT caught by coverage alone — those are now caught by the
+    # distinguishing-term faithfulness gate; see tests/test_rag_faithfulness.py.)
     assert generate.answer("What QR code requirements apply to alcohol labels?")["status"] == "refused"
 
 

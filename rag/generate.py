@@ -31,6 +31,33 @@ def _expand(text: str) -> str:
     return text + (" " + " ".join(extra) if extra else "")
 
 
+# Synonym-expansion keys are matcher-bridged vocabulary (e.g. "title"/"case"/
+# "header" -> "capital letters bold"). They can be corpus-OOV themselves, so they
+# must be exempt from the distinguishing-term gate — otherwise a deterministic
+# FLAG explanation whose failure_reason uses such words would be wrongly refused.
+_EXPAND_KEYS = set(_EXPAND)
+
+
+def _faithful(top, query: str) -> bool:
+    """Distinguishing-term faithfulness gate.
+
+    Coverage can be satisfied by generic corpus overlap ("alcohol", "label")
+    while the query's actual SUBJECT term ("serving facts", "pictorial", "qr") is
+    absent from the corpus — a topically adjacent chunk then looks supported but
+    does not address the specific question. If the query has distinguishing
+    (corpus-OOV) terms and NONE of them appear in the top chunk, the match is
+    unfaithful: refuse. Synonym-expansion keys are excluded so matcher-bridged
+    failure vocabulary isn't mistaken for an off-corpus subject term."""
+    if top is None:
+        return False
+    from .retrieve import get_retriever
+    retr = get_retriever()
+    distinguishing = retr.distinguishing_terms(query, exclude=_EXPAND_KEYS)
+    if not distinguishing:
+        return True  # no distinguishing terms to honor — defer to coverage/dense
+    return bool(distinguishing & retr.chunk_content_terms(top.chunk))
+
+
 def _dense_supports(top) -> bool:
     """A strong cosine hit can support an answer when lexical coverage is thin —
     this is what lets the dense backend recover a genuine semantic match. No-op when
@@ -70,7 +97,7 @@ def answer(question: str, beverage_type: str | None = None, k: int = 4) -> dict:
         scoped = [r for r in results if r.chunk.beverage_type in (bt, "all")]
         results = scoped or results
     top = results[0] if results else None
-    if not _supported(top):
+    if not _supported(top) or not _faithful(top, question):
         return {"status": "refused", "answer": REFUSAL, "citations": []}
     # Keep chunks that genuinely support the question (decent coverage).
     floor = max(config.RAG_MIN_CONFIDENCE, top.coverage * 0.5)
@@ -84,6 +111,11 @@ def explain_flag(field: str, failure_reason: str) -> dict:
     query = _expand(f"{field.replace('_', ' ')} {failure_reason}")
     results = get_retriever().retrieve(query, k=3)
     top = results[0] if results else None
+    # The faithfulness gate (see `answer`) is keyed to open user questions, where an
+    # OOV term is the query's subject. Here the lookup is keyed by a known FLAGGED
+    # `field` (always a real corpus topic) and the free-text `failure_reason` is
+    # description noise full of non-corpus meta-vocabulary ("expected", "literal",
+    # "differs") — so the per-term OOV gate doesn't apply. Coverage/dense still gate.
     if not _supported(top):
         return {"status": "refused", "explanation": REFUSAL, "citations": []}
     return {"status": "answered",
