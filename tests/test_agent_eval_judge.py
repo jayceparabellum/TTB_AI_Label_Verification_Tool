@@ -44,10 +44,32 @@ def _verify_snap(message="The label FLAGs on ABV.", judge=None):
 
 def test_judge_bakes_scores_into_snapshot():
     snap = _verify_snap()
-    llm = _FakeJudgeLLM('{"faithfulness": 5, "clarity": 4, "justification": "matches"}')
+    llm = _FakeJudgeLLM('{"faithfulness": 5, "clarity": 4, "actionability": 5, '
+                        '"calibration": 4, "justification": "matches"}')
     block = J.judge_snapshot(snap, llm=llm)
-    assert block == {"faithfulness": 5, "clarity": 4, "justification": "matches"}
+    assert block == {"faithfulness": 5, "clarity": 4, "actionability": 5,
+                     "calibration": 4, "justification": "matches"}
     assert llm.calls == 1
+
+
+def test_judge_parses_all_four_dims():
+    """_parse extracts all four rubric dimensions (the two new ones included)."""
+    snap = _verify_snap()
+    llm = _FakeJudgeLLM('{"faithfulness": 4, "clarity": 5, "actionability": 3, '
+                        '"calibration": 2, "justification": "ok"}')
+    block = J.judge_snapshot(snap, llm=llm)
+    assert set(block) == {"faithfulness", "clarity", "actionability",
+                          "calibration", "justification"}
+    assert block["actionability"] == 3 and block["calibration"] == 2
+
+
+def test_judge_handles_missing_new_dims_gracefully():
+    """A reply that omits some dims still parses the ones present (no crash)."""
+    snap = _verify_snap()
+    llm = _FakeJudgeLLM('{"faithfulness": 4, "clarity": 5}')
+    block = J.judge_snapshot(snap, llm=llm)
+    assert block == {"faithfulness": 4, "clarity": 5}
+    assert "actionability" not in block and "calibration" not in block
 
 
 def test_judge_parses_json_embedded_in_prose():
@@ -66,8 +88,9 @@ def test_judge_returns_none_when_nothing_to_judge():
     assert J.judge_snapshot(snap, llm=_FakeJudgeLLM("{}")) is None
 
 
-def test_gate_passes_when_judge_at_or_above_threshold():
-    snap = _verify_snap(judge={"faithfulness": 3, "clarity": 4, "justification": "ok"})
+def test_gate_passes_when_all_four_dims_at_or_above_threshold():
+    snap = _verify_snap(judge={"faithfulness": 3, "clarity": 4, "actionability": 5,
+                               "calibration": 3, "justification": "ok"})
     g = R.grade_snapshot(snap, judge_threshold=3)
     assert g["judge"][0] is True
     assert g["passed"]
@@ -77,6 +100,22 @@ def test_gate_fails_when_judge_below_threshold():
     snap = _verify_snap(judge={"faithfulness": 2, "clarity": 4, "justification": "soft"})
     g = R.grade_snapshot(snap, judge_threshold=3)
     assert g["judge"][0] is False
+    assert not g["passed"]
+
+
+def test_gate_threshold_checks_each_new_dim():
+    """A low actionability or calibration alone fails the gate — the two new dims
+    are threshold-checked, not just the original two."""
+    low_action = _verify_snap(judge={"faithfulness": 5, "clarity": 5,
+                                     "actionability": 2, "calibration": 5})
+    g = R.grade_snapshot(low_action, judge_threshold=3)
+    assert g["judge"][0] is False and "actionability" in g["judge"][1]
+    assert not g["passed"]
+
+    low_calib = _verify_snap(judge={"faithfulness": 5, "clarity": 5,
+                                    "actionability": 5, "calibration": 1})
+    g = R.grade_snapshot(low_calib, judge_threshold=3)
+    assert g["judge"][0] is False and "calibration" in g["judge"][1]
     assert not g["passed"]
 
 

@@ -29,7 +29,7 @@
           "caller": {
             "type": "direct"
           },
-          "id": "toolu_01MTh3A9ti5yevZW1FUf1Ftb",
+          "id": "toolu_01TUfDhwzR7JzXeabd1qvcra",
           "input": {
             "failure_reason": "warning header in Title Case instead of ALL CAPS",
             "field": "warning header"
@@ -42,7 +42,56 @@
     {
       "kind": "tool_result",
       "result": {
+        "citations": [],
+        "explanation": "Not found in the regulations on file.",
+        "status": "refused"
+      },
+      "tool": "explain_flag"
+    },
+    {
+      "args": {
+        "question": "what is the required format for the government health warning header on an alcohol label"
+      },
+      "kind": "tool_call",
+      "tool": "regulatory_lookup"
+    },
+    {
+      "kind": "message",
+      "text": [
+        {
+          "text": "Let me try a regulatory lookup instead to find the exact requirement:",
+          "type": "text"
+        },
+        {
+          "caller": {
+            "type": "direct"
+          },
+          "id": "toolu_01TE6tafzRULYZUMYg83pLwy",
+          "input": {
+            "question": "what is the required format for the government health warning header on an alcohol label"
+          },
+          "name": "regulatory_lookup",
+          "type": "tool_use"
+        }
+      ]
+    },
+    {
+      "kind": "tool_result",
+      "result": {
+        "answer": "Based only on the regulations on file:\n\n27 CFR 4.32(a) \u2014 Labels of wine must state: the brand name; the class, type, or other designation; the alcohol content; the name and address of the bottler or importer; and the net contents. The container must also bear the Government health warning statement required by 27 CFR part 16.\n\n27 CFR 5.63(a) \u2014 Labels of distilled spirits must state: the brand name; the class and type or other designation; the alcohol content; the name and address of the bottler or importer; the net contents; and, where applicable, a commodity statement. The container must also bear the Government health warning statement required by 27 CFR part 16.\n\n27 CFR 16.22(a) \u2014 The health warning statement must be readily legible, appear on a contrasting background, and be separate and apart from other information. The words 'GOVERNMENT WARNING' must appear in capital letters and in bold type. The remainder of the statement may not appear in bold.",
         "citations": [
+          {
+            "beverage_type": "wine",
+            "citation": "27 CFR 4.32(a)",
+            "section": "4.32",
+            "source_url": "https://www.ecfr.gov/current/title-27/section-4.32"
+          },
+          {
+            "beverage_type": "spirits",
+            "citation": "27 CFR 5.63(a)",
+            "section": "5.63",
+            "source_url": "https://www.ecfr.gov/current/title-27/section-5.63"
+          },
           {
             "beverage_type": "all",
             "citation": "27 CFR 16.22(a)",
@@ -50,14 +99,13 @@
             "source_url": "https://www.ecfr.gov/current/title-27/section-16.22"
           }
         ],
-        "explanation": "27 CFR 16.22(a) \u2014 The health warning statement must be readily legible, appear on a contrasting background, and be separate and apart from other information. The words 'GOVERNMENT WARNING' must appear in capital letters and in bold type. The remainder of the statement may not appear in bold.",
         "status": "answered"
       },
-      "tool": "explain_flag"
+      "tool": "regulatory_lookup"
     },
     {
       "kind": "message",
-      "text": "**The violation is 27 CFR 16.22(a).**\n\nThe regulation explicitly requires that the words **\"GOVERNMENT WARNING\" must appear in capital letters** and in bold type. If the header is in Title Case (e.g., \"Government Warning\") instead of ALL CAPS, it fails this requirement.\n\nThe full rule also mandates that:\n- The warning be readily legible\n- It appear on a contrasting background\n- It be separate and apart from other information on the label\n- The remainder of the warning statement (after the header) may not appear in bold\n\nSo the Title Case header is a direct violation of the mandatory ALL-CAPS formatting for \"GOVERNMENT WARNING.\""
+      "text": "**The violation is in 27 CFR 16.22(a).**\n\nThe regulation explicitly requires that the words **\"GOVERNMENT WARNING\" must appear in capital letters** (ALL CAPS) and in bold type. If your label shows the warning header in Title Case (e.g., \"Government Warning\" instead of \"GOVERNMENT WARNING\"), it fails this requirement.\n\nThe rest of the warning statement may not appear in bold, but that header must be ALL CAPS and bold\u2014no exceptions."
     }
   ]
 }

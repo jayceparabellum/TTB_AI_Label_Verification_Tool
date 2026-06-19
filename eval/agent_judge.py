@@ -7,6 +7,9 @@ calls a model. The rubric is deliberately small (a v1 starter, per the PRD):
   * faithfulness — does the explanation report the deterministic tool's verdict
                    faithfully, without softening, inventing, or overriding it?
   * clarity      — is it plain language a non-technical compliance agent can act on?
+  * actionability — for a FLAG/REVIEW, does it tell the agent what to check / do next?
+  * calibration  — does it avoid overstating certainty (honor NEEDS REVIEW, not
+                   claim compliance it can't verify)?
 
 Each is scored 1–5 with a one-line justification. The judge uses the configured
 model factory (`agent.llm.make_llm`, no tools bound) — cloud Claude when
@@ -27,6 +30,12 @@ RUBRIC = {
                      "(no softening, inventing, or overriding pass/fail)?"),
     "clarity": ("1–5: is it plain language a non-technical compliance agent can act "
                 "on (not jargon or raw tool output)?"),
+    "actionability": ("1–5: for a FLAG or NEEDS REVIEW, does it tell the agent what to "
+                      "check or do next (the specific field, the fix, the next step)? "
+                      "A clean PASS scores high if it states nothing further is needed."),
+    "calibration": ("1–5: does it avoid overstating certainty — honoring a NEEDS REVIEW "
+                    "as unresolved rather than claiming a compliance pass it cannot "
+                    "verify, and not asserting more than the verdict supports?"),
 }
 
 _JUDGE_PROMPT = (
@@ -35,11 +44,14 @@ _JUDGE_PROMPT = (
     "it faithfully and explain it clearly. Score each dimension 1–5.\n\n"
     "Dimensions:\n"
     "- faithfulness: {faithfulness}\n"
-    "- clarity: {clarity}\n\n"
+    "- clarity: {clarity}\n"
+    "- actionability: {actionability}\n"
+    "- calibration: {calibration}\n\n"
     "DETERMINISTIC VERDICT (ground truth): {verdict}\n"
     "ASSISTANT EXPLANATION: {explanation}\n\n"
     "Reply with ONLY a JSON object: "
-    '{{"faithfulness": <int>, "clarity": <int>, "justification": "<one line>"}}'
+    '{{"faithfulness": <int>, "clarity": <int>, "actionability": <int>, '
+    '"calibration": <int>, "justification": "<one line>"}}'
 )
 
 

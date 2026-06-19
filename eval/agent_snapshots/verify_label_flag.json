@@ -3,7 +3,7 @@
   "expected_tool": "verify_label",
   "ground_truth": {
     "confidence": 95,
-    "elapsed_ms": 193,
+    "elapsed_ms": 186,
     "fields": [
       {
         "detail": "similarity 100/100 (threshold 95)",
@@ -47,9 +47,11 @@
   ],
   "is_write": false,
   "judge": {
+    "actionability": 5,
+    "calibration": 5,
     "clarity": 5,
     "faithfulness": 5,
-    "justification": "Assistant reports the FLAG verdict faithfully without softening, clearly identifies the specific discrepancy (7.5% vs 5.0% ABV), cites relevant regulation, and provides actionable next steps in plain language."
+    "justification": "Explanation faithfully reports the FLAG verdict, clearly identifies the specific mismatch (7.5% vs 5.0% ABV), cites the governing regulation, and directs the agent to verify and correct the discrepancy\u2014all without overstating certainty or softening the deterministic result."
   },
   "transcript": [
     {
@@ -71,7 +73,7 @@
           "caller": {
             "type": "direct"
           },
-          "id": "toolu_01PUWDZL1MHFCbMWeVXxGHni",
+          "id": "toolu_016GfvpGAafHwadjqKUEk8ju",
           "input": {
             "alcohol_content": "5.0%",
             "brand": "Stone's Throw"
@@ -85,7 +87,7 @@
       "kind": "tool_result",
       "result": {
         "confidence": 95,
-        "elapsed_ms": 200,
+        "elapsed_ms": 199,
         "fields": [
           {
             "detail": "similarity 100/100 (threshold 95)",
@@ -126,7 +128,7 @@
     },
     {
       "kind": "message",
-      "text": "**RESULT: FLAG**\n\nThe label **fails verification**. Here's what the scanner found:\n\n| Field | Status | Details |\n|-------|--------|---------|\n| **Brand** | \u2713 PASS | \"Stone's Throw\" matches perfectly |\n| **Alcohol Content** | \u2717 **FLAG** | Label shows **7.5% ABV**, but application claims **5.0% ABV** \u2014 mismatch |\n| **Government Warning** | \u2713 PASS | Correct wording and ALL CAPS formatting |\n\n**The Problem:**  \nThe label displays 7.5% alcohol by volume, but your application entry says 5.0%. This is a material discrepancy governed by **27 CFR 7.65(a)**, which requires that when alcohol content is stated on a malt beverage label, it must be accurate and expressed as a percentage of alcohol by volume.\n\n**Next Step:**  \nVerify which value is correct \u2014 the physical label or the application entry \u2014 and correct the mismatch before approval."
+      "text": "**RESULT: FLAG**\n\nThe label **fails verification**. Here's what the scanner found:\n\n| Field | Status | Details |\n|-------|--------|---------|\n| **Brand** | \u2713 PASS | \"Stone's Throw\" matches perfectly |\n| **Alcohol Content** | \u2717 **FLAG** | Label shows **7.5% ABV**, but application claims **5.0% ABV** \u2014 mismatch |\n| **Government Warning** | \u2713 PASS | Correct wording and ALL CAPS formatting |\n\n**The Problem:**  \nThe label displays 7.5% alcohol by volume, but your application entry is 5.0%. This is a material discrepancy governed by **27 CFR 7.65(a)**, which requires that when alcohol content is stated on a malt beverage label, it must be accurate and expressed as a percentage of alcohol by volume.\n\n**Next Step:**  \nVerify which value is correct \u2014 the physical label or the application entry \u2014 and correct the mismatch before approval."
     }
   ]
 }

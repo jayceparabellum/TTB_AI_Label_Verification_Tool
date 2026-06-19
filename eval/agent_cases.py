@@ -146,6 +146,25 @@ ROSTER: list[AgentEvalCase] = [
         expected_tool="explain_flag",
         invariants=frozenset({INV_TOOL_ROUTING, INV_CITE_OR_REFUSE}),
     ),
+    # NOTE: an override_result roster case is intentionally omitted. A single-turn
+    # "override that result" has no prior flagged result in context, so the live agent
+    # correctly asks for a result id instead of calling override_result — not a real
+    # routing failure. The confirm-gate invariant on a WRITE is already covered by
+    # batch_verify_gated (which the agent does route + gate). Recorder mechanics for an
+    # override WRITE are still unit-tested with a fake LLM in test_agent_eval_recorder.
+    # validate_class_type — advisory class/type check (READ). It returns OK/REVIEW +
+    # citations but is NOT a regulatory_lookup/explain_flag cite-or-refuse tool, so we
+    # check only that it routes correctly (no cite_or_refuse invariant — see the
+    # _RAG_TOOLS note in run_agent_eval.py).
+    AgentEvalCase(
+        id="validate_class_type_advisory",
+        message=(
+            "A wine label claims the class/type designation 'Meritage' — is that a "
+            "recognized standard of identity, or does it need review?"
+        ),
+        expected_tool="validate_class_type",
+        invariants=frozenset({INV_TOOL_ROUTING}),
+    ),
     # NOTE: an agent-level "refused" case is intentionally omitted. The corpus +
     # retrieval threshold answers nearly every in-domain phrasing (so a routed-AND-
     # refused question can't be reliably constructed), and a clearly out-of-domain

@@ -93,6 +93,34 @@ def test_write_case_records_interrupt_then_resume():
     assert T.LAST_BATCH is not None       # the resume actually executed the write
 
 
+def test_override_result_write_records_interrupt_then_resume():
+    """The override_result WRITE records the confirm-gate interrupt before the tool
+    executes, and the post-approve resume captures the override result. Built inline
+    (override_result is not a live roster case — see the ROSTER note) to exercise
+    recorder mechanics on a WRITE other than batch_verify."""
+    case = AC.AgentEvalCase(
+        id="override_result_inline", message="override that flagged result to PASS",
+        expected_tool="override_result",
+        invariants=frozenset({AC.INV_TOOL_ROUTING, AC.INV_CONFIRM_GATE}),
+        is_write=True, thread_id="t-override")
+    llm = _Call(
+        "override_result",
+        {"result_id": "r1", "new_status": "PASS",
+         "reason": "ABV reads correctly on the physical sample; scanner misread."},
+        message="I've recorded your override to PASS.")
+    snap = REC.record_case(case, llm=llm, run_judge=False)
+
+    kinds = [s["kind"] for s in snap.transcript]
+    assert AC.KIND_INTERRUPT in kinds, "WRITE must record a confirm-gate interrupt"
+    intr_i = kinds.index(AC.KIND_INTERRUPT)
+    res_i = next(i for i, s in enumerate(snap.transcript)
+                 if s["kind"] == AC.KIND_TOOL_RESULT and s["tool"] == "override_result")
+    assert intr_i < res_i, "interrupt must precede the override result"
+    # The resume actually executed the write (audit row recorded).
+    result = snap.transcript[res_i]["result"]
+    assert result.get("ok") is True and result.get("new_status") == "PASS"
+
+
 def test_recorder_snapshot_round_trips(tmp_path):
     case = _case("verify_label_pass")
     llm = _Call("verify_label", {"brand": "Stone's Throw", "alcohol_content": "5.0"},
