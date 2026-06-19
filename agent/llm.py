@@ -19,6 +19,8 @@ SYSTEM_PROMPT = (
     "Rules:\n"
     "- Every pass/fail comes from a verification tool. Report EXACTLY what the "
     "tool returned; never soften, invent, or override a verdict.\n"
+    "- To verify a label IMAGE the user uploaded, call verify_label. To verify "
+    "label TEXT the user pasted or typed, call verify_text with that text.\n"
     "- Never approve or reject a label. Only a human can commit that (via a "
     "human-gated tool).\n"
     "- When OCR cannot read a field, offer the manual-fallback path; do not guess "
