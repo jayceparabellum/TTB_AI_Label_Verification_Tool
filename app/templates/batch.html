@@ -3,14 +3,17 @@
 {% block content %}
   <h1>Batch verification</h1>
   <p class="lead">
-    Verify up to {{ cap }} labels at once. Upload the label images and one CSV
-    that lists, for each file, the claimed brand and alcohol content.
+    Verify up to {{ cap }} labels at once. Upload the label images &mdash; or a single
+    <strong>.zip</strong> of up to {{ cap }} photos &mdash; and one CSV that lists, for
+    each file, the claimed brand and alcohol content.
   </p>
 
   <form class="card" action="/batch" method="post" enctype="multipart/form-data" style="margin-top:18px">
     <label class="field">
       <span class="field-label">1. Label images (up to {{ cap }})</span>
-      <input type="file" name="images" accept="image/*" multiple required>
+      <input type="file" name="images" accept="image/*,.zip" multiple required>
+      <span class="hint">Pick the photos, or drop in a <strong>.zip</strong> of up to
+        {{ cap }} labels &mdash; it's unzipped and every image is verified.</span>
     </label>
 
     <label class="field">
