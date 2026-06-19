@@ -7,6 +7,7 @@ pytesseract==0.3.13
 rapidfuzz==3.11.0
 opencv-python-headless==4.11.0.86
 numpy==2.2.1
+openpyxl==3.1.5
 
 # --- Layer 2: conversational agent (Phase A) ---
 langgraph==1.2.5

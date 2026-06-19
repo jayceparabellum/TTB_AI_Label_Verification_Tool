@@ -40,12 +40,18 @@
   }
 
   // Batch results-CSV download button (rendered live; not persisted).
+  function downloadMime(filename) {
+    return /\.xlsx$/i.test(filename || "")
+      ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      : "text/csv";
+  }
   function renderDownload(dl) {
+    const name = dl.filename || "batch_results.csv";
     const a = document.createElement("a");
     a.className = "btn-secondary chat-download";
-    a.textContent = "⬇ Download " + (dl.filename || "results.csv");
-    a.download = dl.filename || "batch_results.csv";
-    a.href = "data:text/csv;base64," + dl.b64;
+    a.textContent = "⬇ Download " + name;
+    a.download = name;
+    a.href = "data:" + downloadMime(name) + ";base64," + dl.b64;
     log.appendChild(a);
     log.scrollTop = log.scrollHeight;
   }
@@ -88,6 +94,9 @@
         else if (evt.type === "tool_step") {
           bubble("tool", "🔧 " + evt.tool + " → " + evt.result);
           if (evt.download && evt.download.b64) renderDownload(evt.download);
+          if (Array.isArray(evt.downloads)) evt.downloads.forEach(function (dl) {
+            if (dl && dl.b64) renderDownload(dl);
+          });
         }
         else if (evt.type === "message") bubble("assistant", evt.text);
         else if (evt.type === "error") bubble("error", evt.text);

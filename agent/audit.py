@@ -55,3 +55,20 @@ def recent(limit: int = 20) -> list[dict]:
             f"SELECT {','.join(_COLS)} FROM audit ORDER BY id DESC LIMIT ?", (limit,)
         ).fetchall()
     return [dict(zip(_COLS, r)) for r in rows]
+
+
+# Full-dump columns include the row id (recent() hides it). Stable insertion order
+# (oldest → newest by id) so an export reads chronologically and is reproducible.
+_DUMP_COLS = ["id", *_COLS]
+
+
+def all_rows() -> list[dict]:
+    """Every audit row, oldest first, including the row id (read-only).
+
+    Unlike recent() this has no limit — the export needs the complete trail.
+    """
+    with _conn() as c:
+        rows = c.execute(
+            f"SELECT {','.join(_DUMP_COLS)} FROM audit ORDER BY id ASC"
+        ).fetchall()
+    return [dict(zip(_DUMP_COLS, r)) for r in rows]
