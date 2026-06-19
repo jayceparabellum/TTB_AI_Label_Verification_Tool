@@ -390,15 +390,22 @@ def _is_zip(name: str, content_type: str) -> bool:
 
 async def _expand_uploads(uploads: list[UploadFile]) -> list[tuple[str, bytes]]:
     """Read uploads into (filename, bytes), expanding any .zip into its image
-    members so a zipped folder and loose images take the same downstream path.
-    Raises ingest.ZipIngestError on a corrupt or over-cap archive."""
+    members so a zipped folder, a picked folder (webkitdirectory), and loose images
+    all take the same downstream path. Non-image, non-zip entries (folder junk like
+    .DS_Store, Thumbs.db, or nested metadata) are skipped rather than fed to the
+    verifier. Raises ingest.ZipIngestError on a corrupt or over-cap archive."""
     out: list[tuple[str, bytes]] = []
     for up in uploads:
-        data = await up.read()
-        if _is_zip(up.filename or "", (up.content_type or "").lower()):
-            out.extend(ingest.extract_images_from_zip(data))
-        else:
-            out.append((up.filename or "", data))
+        name = up.filename or ""
+        ct = (up.content_type or "").lower()
+        if _is_zip(name, ct):
+            out.extend(ingest.extract_images_from_zip(await up.read()))
+        elif ct.startswith("image/") or name.lower().endswith(_IMAGE_EXTS):
+            # Use the basename: a picked folder sends "folder/sub/label.png" as the
+            # filename, which must still match the CSV's "label.png" row.
+            base = name.replace("\\", "/").rsplit("/", 1)[-1]
+            out.append((base, await up.read()))
+        # else: skip — not an image or zip (folder junk / unsupported file).
     return out
 
 
