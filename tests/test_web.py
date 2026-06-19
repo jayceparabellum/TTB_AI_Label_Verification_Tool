@@ -57,6 +57,16 @@ def test_results_have_print_control():
     assert 'onclick="window.print()"' in r.text
 
 
+# --- Detailed per-flag reasons section (T8) -----------------------------------
+def test_flagged_field_shows_detailed_reason_and_citation():
+    # abv_mismatch flags the alcohol field -> the results page must explain WHY,
+    # with what-to-check guidance and the controlling 27 CFR citation.
+    r = client.post("/verify-sample/abv_mismatch")
+    assert "Why this FLAG" in r.text
+    assert "What to check:" in r.text
+    assert "§4.36" in r.text                       # controlling alcohol-content reg
+
+
 # --- U4: inline re-check (matchers on carried OCR text, no re-OCR) --------------
 def test_results_carry_ocr_text_and_recheck_form():
     r = client.post("/verify-sample/abv_mismatch")

@@ -43,16 +43,24 @@
 
     <div class="results">
       {% for f in result.fields %}
-      <div class="result-card {{ 'pass' if f.passed else 'flag' }}">
+      {% set rsn = flag_reason(f) %}
+      {% set state = 'pass' if f.passed else ('review' if f.inconclusive else 'flag') %}
+      <div class="result-card {{ state }}">
         <div class="result-head">
-          <span class="badge">{{ 'PASS' if f.passed else 'FLAG' }}</span>
+          <span class="badge">{{ 'PASS' if f.passed else ('REVIEW' if f.inconclusive else 'FLAG') }}</span>
           <span class="result-name">{{ f.label }}</span>
         </div>
         <dl class="result-detail">
           <dt>Application says</dt><dd>{{ f.expected }}</dd>
           <dt>On the label</dt><dd>{{ f.found }}</dd>
         </dl>
-        {% if f.detail %}<p class="result-note">{{ f.detail }}</p>{% endif %}
+        {% if rsn %}
+        <div class="result-reason">
+          <p class="reason-why"><strong>Why this {{ rsn.status }}:</strong> {{ rsn.reason }}</p>
+          <p class="reason-check"><strong>What to check:</strong> {{ rsn.what_to_check }}</p>
+          {% if rsn.citation %}<p class="reason-cite">📖 {{ rsn.citation }}</p>{% endif %}
+        </div>
+        {% elif f.detail %}<p class="result-note">{{ f.detail }}</p>{% endif %}
       </div>
       {% endfor %}
     </div>

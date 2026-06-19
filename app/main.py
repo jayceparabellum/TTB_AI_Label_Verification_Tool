@@ -17,6 +17,7 @@ from fastapi.templating import Jinja2Templates
 
 from . import batch as batch_mod
 from . import ingest
+from . import reasons as reasons_mod
 from . import ocr
 from .models import VerificationResult
 from .reference import OFFICIAL_GOVERNMENT_WARNING
@@ -62,6 +63,8 @@ PROMPT_CHIPS = [
 # Exposed to every template so the global pop-out chat widget (in base.html) can
 # render the same chips without each route passing them.
 templates.env.globals["prompt_chips"] = PROMPT_CHIPS
+# Detailed per-flag reason explanations, callable from result templates.
+templates.env.globals["flag_reason"] = reasons_mod.explain
 
 
 @app.get("/chat", response_class=HTMLResponse)
