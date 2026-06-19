@@ -365,7 +365,13 @@ cumulative upload with a friendly message.
 
 ## Risks, Open Questions & Decisions for the User
 
-**Decisions the user must make:**
+**Decisions — RESOLVED 2026-06-19 (user chose the recommended option on each):**
+- **D1 → companion `POST /agent/upload`** (keep the SSE turn + resume simple).
+- **D2 → keep the separate Single/Text/Batch pages** (button UI stays primary; chat is additive).
+- **D3 → sensible default caps:** ~10 MB per image, ~50 MB cumulative per chat session,
+  and reuse `BATCH_MAX_LABELS = 25` for the in-chat CSV batch (tunable later).
+
+**Original decision write-up (for reference):**
 
 - **D1 — Upload transport.** *Recommended:* a **companion `POST /agent/upload`**
   (keeps the SSE turn simple, testable, and the resume path clean). *Alternative:* make
