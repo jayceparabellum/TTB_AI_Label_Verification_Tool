@@ -49,5 +49,22 @@ def test_no_warning_region_defers():
     assert r.passed is False and r.inconclusive is True
 
 
+def test_dropped_negation_does_not_confidently_pass():
+    # Regression (Six Sigma review): removing 'not' from "should not drink" inverts
+    # the meaning but scores ~99% on character overlap. It must NOT confidently PASS
+    # (a wrong PASS on a non-compliant warning is the worst, regulatory-miss error).
+    inverted = W.replace("should not drink", "should drink")
+    r = mw(inverted)
+    assert r.passed is False                # never a confident PASS
+    assert r.inconclusive is True           # defers to a human instead
+
+
+def test_one_char_ocr_noise_still_passes():
+    # The word-completeness guard must not over-reject genuine compliant reads with
+    # a character of OCR noise (each word still fuzzily matches).
+    noisy = W.replace("operate machinery", "operate machmery")
+    assert mw(noisy).passed is True
+
+
 def test_band_thresholds_ordered():
     assert WARNING_REVIEW_FLOOR < WARNING_SIMILARITY_THRESHOLD

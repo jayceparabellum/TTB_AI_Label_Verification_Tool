@@ -227,6 +227,26 @@ def _warning_window(norm_ocr: str, norm_expected: str) -> str | None:
     return norm_ocr[idx: idx + int(len(norm_expected) * 1.2)]
 
 
+def _all_official_words_present(window: str, norm_expected: str,
+                                min_word_ratio: float = 80.0) -> bool:
+    """True only if every word of the official warning has a close match in the OCR
+    window. Character-level fuzz.ratio alone can't catch a DROPPED short word — e.g.
+    removing 'not' from 'should not drink' still scores ~99% — which would confidently
+    PASS a meaning-inverted, non-compliant warning (the worst error). OCR noise
+    substitutes characters *within* words (so each word still matches fuzzily) but
+    does not delete whole words, so a missing word signals genuine alteration."""
+    win_words = normalize_loose(window).split()
+    # Only check words of length >= 3: 1-2 char words ('a', 'of', '1') fuzzy-match
+    # unreliably and OCR rarely drops them meaningfully, whereas the meaning-bearing
+    # words that invert compliance ('not', 'risk', 'pregnancy') are all >= 3 chars.
+    for word in normalize_loose(norm_expected).split():
+        if len(word) < 3:
+            continue
+        if not any(fuzz.ratio(word, w) >= min_word_ratio for w in win_words):
+            return False
+    return True
+
+
 def match_government_warning(ocr_text: str, expected: str = OFFICIAL_GOVERNMENT_WARNING) -> FieldResult:
     """Verify the government warning: strict on wording + ALL-CAPS casing, but
     tolerant of OCR noise, and DEFERRING (not flagging) when it can't be read.
@@ -265,7 +285,11 @@ def match_government_warning(ocr_text: str, expected: str = OFFICIAL_GOVERNMENT_
     similarity = fuzz.ratio(norm_expected, window)
 
     if has_allcaps_header:
-        if similarity >= WARNING_SIMILARITY_THRESHOLD:
+        # PASS needs BOTH a high character match AND every official word present, so
+        # a dropped meaning-bearing word (e.g. 'not') can't ride a high char-ratio
+        # into a confident PASS — it falls to REVIEW (defer), never a wrong PASS.
+        if (similarity >= WARNING_SIMILARITY_THRESHOLD
+                and _all_official_words_present(window, norm_expected)):
             return FieldResult(
                 field="government_warning", label="Government warning", passed=True,
                 expected=expected,
