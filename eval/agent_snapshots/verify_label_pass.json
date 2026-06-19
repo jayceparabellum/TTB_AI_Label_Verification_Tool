@@ -1,0 +1,127 @@
+{
+  "case_id": "verify_label_pass",
+  "expected_tool": "verify_label",
+  "ground_truth": {
+    "confidence": 95,
+    "elapsed_ms": 202,
+    "fields": [
+      {
+        "detail": "similarity 100/100 (threshold 95)",
+        "expected": "Stone's Throw",
+        "field": "brand",
+        "found": "Stone's Throw",
+        "label": "Brand name",
+        "passed": true
+      },
+      {
+        "detail": "matches the claimed alcohol content",
+        "expected": "5% ABV",
+        "field": "alcohol_content",
+        "found": "5%",
+        "label": "Alcohol content",
+        "passed": true
+      },
+      {
+        "detail": "matches 27 CFR 16.21 (100% similarity, ALL CAPS)",
+        "expected": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "field": "government_warning",
+        "found": "Official warning present (correct wording and ALL CAPS).",
+        "label": "Government warning",
+        "passed": true
+      }
+    ],
+    "message": "",
+    "needs_review": false,
+    "overall_pass": true,
+    "readable": true
+  },
+  "inputs": {
+    "alcohol_content": "5.0",
+    "brand": "Stone's Throw",
+    "image_id": "clean_pass",
+    "kind": "image"
+  },
+  "invariants": [
+    "tool_routing",
+    "verdict_verbatim"
+  ],
+  "is_write": false,
+  "judge": {
+    "clarity": 5,
+    "faithfulness": 5,
+    "justification": "Assistant reports the PASS verdict faithfully with no hedging, and presents verification details in a clear, actionable table format that a non-technical compliance agent can immediately understand and act upon."
+  },
+  "transcript": [
+    {
+      "args": {
+        "alcohol_content": "5.0%",
+        "brand": "Stone's Throw"
+      },
+      "kind": "tool_call",
+      "tool": "verify_label"
+    },
+    {
+      "kind": "message",
+      "text": [
+        {
+          "text": "I'll verify the loaded label for Stone's Throw at 5.0% ABV.",
+          "type": "text"
+        },
+        {
+          "caller": {
+            "type": "direct"
+          },
+          "id": "toolu_018At7PUvi1JnPdeicePmTnc",
+          "input": {
+            "alcohol_content": "5.0%",
+            "brand": "Stone's Throw"
+          },
+          "name": "verify_label",
+          "type": "tool_use"
+        }
+      ]
+    },
+    {
+      "kind": "tool_result",
+      "result": {
+        "confidence": 95,
+        "elapsed_ms": 284,
+        "fields": [
+          {
+            "detail": "similarity 100/100 (threshold 95)",
+            "expected": "Stone's Throw",
+            "field": "brand",
+            "found": "Stone's Throw",
+            "label": "Brand name",
+            "passed": true
+          },
+          {
+            "detail": "matches the claimed alcohol content",
+            "expected": "5% ABV",
+            "field": "alcohol_content",
+            "found": "5%",
+            "label": "Alcohol content",
+            "passed": true
+          },
+          {
+            "detail": "matches 27 CFR 16.21 (100% similarity, ALL CAPS)",
+            "expected": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+            "field": "government_warning",
+            "found": "Official warning present (correct wording and ALL CAPS).",
+            "label": "Government warning",
+            "passed": true
+          }
+        ],
+        "message": "",
+        "needs_review": false,
+        "overall_pass": true,
+        "readable": true
+      },
+      "tool": "verify_label"
+    },
+    {
+      "kind": "message",
+      "text": "**\u2713 PASS**\n\nThe loaded label for **Stone's Throw at 5.0% ABV** has been verified and **passes all compliance checks**:\n\n| Field | Result | Details |\n|-------|--------|---------|\n| **Brand name** | \u2713 PASS | \"Stone's Throw\" matches exactly (100% similarity) |\n| **Alcohol content** | \u2713 PASS | 5% ABV matches the claimed 5.0% |\n| **Government warning** | \u2713 PASS | Official warning present with correct wording and ALL CAPS formatting per 27 CFR 16.21 |\n\n**Overall confidence:** 95%  \n**Status:** No further review needed."
+    }
+  ]
+}

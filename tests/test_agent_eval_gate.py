@@ -174,6 +174,22 @@ def test_verdict_verbatim_passes_on_unnegated_keyword():
     assert g["invariants"][AC.INV_VERDICT_VERBATIM][0]
 
 
+def test_verdict_verbatim_passes_with_per_field_breakdown():
+    # Real agent output: overall verdict stated first, then a per-field table whose
+    # rows contain "PASS"/"FLAG" labels. The leading overall verdict is what counts.
+    g = R.grade_snapshot(_verify_snap_msg(
+        "RESULT: FLAG. Brand: PASS. Alcohol content: FLAG. Government warning: PASS."))
+    assert g["invariants"][AC.INV_VERDICT_VERBATIM][0]
+
+
+def test_verdict_verbatim_fails_when_overall_verdict_is_wrong_despite_field_labels():
+    # If the agent LEADS with the wrong overall verdict, it still fails — even with a
+    # correct field label later. (overall is FLAG; agent leads with PASS.)
+    g = R.grade_snapshot(_verify_snap_msg(
+        "RESULT: PASS. Everything looks good. (Alcohol content: FLAG)"))
+    assert not g["invariants"][AC.INV_VERDICT_VERBATIM][0]
+
+
 def test_cite_or_refuse_ignores_validate_class_type_status():
     # validate_class_type also returns a "status" (OK/REVIEW) but is NOT a cite-or-
     # refuse tool; keying off tool name (#2) means it can't spuriously fail the gate.

@@ -1,0 +1,63 @@
+{
+  "case_id": "explain_flag_warning_caps",
+  "expected_tool": "explain_flag",
+  "ground_truth": null,
+  "inputs": {},
+  "invariants": [
+    "cite_or_refuse",
+    "tool_routing"
+  ],
+  "is_write": false,
+  "judge": null,
+  "transcript": [
+    {
+      "args": {
+        "failure_reason": "warning header in Title Case instead of ALL CAPS",
+        "field": "warning header"
+      },
+      "kind": "tool_call",
+      "tool": "explain_flag"
+    },
+    {
+      "kind": "message",
+      "text": [
+        {
+          "text": "I'll look up the controlling regulation for the warning header format.",
+          "type": "text"
+        },
+        {
+          "caller": {
+            "type": "direct"
+          },
+          "id": "toolu_01MTh3A9ti5yevZW1FUf1Ftb",
+          "input": {
+            "failure_reason": "warning header in Title Case instead of ALL CAPS",
+            "field": "warning header"
+          },
+          "name": "explain_flag",
+          "type": "tool_use"
+        }
+      ]
+    },
+    {
+      "kind": "tool_result",
+      "result": {
+        "citations": [
+          {
+            "beverage_type": "all",
+            "citation": "27 CFR 16.22(a)",
+            "section": "16.22",
+            "source_url": "https://www.ecfr.gov/current/title-27/section-16.22"
+          }
+        ],
+        "explanation": "27 CFR 16.22(a) \u2014 The health warning statement must be readily legible, appear on a contrasting background, and be separate and apart from other information. The words 'GOVERNMENT WARNING' must appear in capital letters and in bold type. The remainder of the statement may not appear in bold.",
+        "status": "answered"
+      },
+      "tool": "explain_flag"
+    },
+    {
+      "kind": "message",
+      "text": "**The violation is 27 CFR 16.22(a).**\n\nThe regulation explicitly requires that the words **\"GOVERNMENT WARNING\" must appear in capital letters** and in bold type. If the header is in Title Case (e.g., \"Government Warning\") instead of ALL CAPS, it fails this requirement.\n\nThe full rule also mandates that:\n- The warning be readily legible\n- It appear on a contrasting background\n- It be separate and apart from other information on the label\n- The remainder of the warning statement (after the header) may not appear in bold\n\nSo the Title Case header is a direct violation of the mandatory ALL-CAPS formatting for \"GOVERNMENT WARNING.\""
+    }
+  ]
+}

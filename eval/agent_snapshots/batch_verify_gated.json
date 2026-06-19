@@ -1,0 +1,111 @@
+{
+  "case_id": "batch_verify_gated",
+  "expected_tool": "batch_verify",
+  "ground_truth": {
+    "errors": 0,
+    "flagged": 2,
+    "needs_review": 0,
+    "passed": 1,
+    "total": 3
+  },
+  "inputs": {
+    "kind": "batch"
+  },
+  "invariants": [
+    "confirm_gate",
+    "tool_routing"
+  ],
+  "is_write": true,
+  "judge": {
+    "clarity": 5,
+    "faithfulness": 5,
+    "justification": "Assistant accurately reports all three results (1 passed, 2 flagged, 0 needs_review) with clear, actionable descriptions of what failed without inventing details or softening the verdict."
+  },
+  "transcript": [
+    {
+      "args": {},
+      "kind": "tool_call",
+      "tool": "batch_verify"
+    },
+    {
+      "kind": "message",
+      "text": [
+        {
+          "text": "I'll run a batch verification over all the loaded sample labels.",
+          "type": "text"
+        },
+        {
+          "caller": {
+            "type": "direct"
+          },
+          "id": "toolu_013HLktYw2XQzAjp6XSpYn4Z",
+          "input": {},
+          "name": "batch_verify",
+          "type": "tool_use"
+        }
+      ]
+    },
+    {
+      "action": "batch_verify",
+      "kind": "interrupt",
+      "summary": "Verify all loaded sample labels as a batch"
+    },
+    {
+      "kind": "tool_result",
+      "result": {
+        "errors": 0,
+        "flagged": 2,
+        "needs_review": 0,
+        "passed": 1,
+        "results_csv_b64": "ZmlsZW5hbWUsb3ZlcmFsbCxicmFuZCxhbGNvaG9sX2NvbnRlbnQsZ292ZXJubWVudF93YXJuaW5nDQpjbGVhbl9wYXNzLnBuZyxQQVNTLFBBU1MsUEFTUyxQQVNTDQphYnZfbWlzbWF0Y2gucG5nLEZMQUcsUEFTUyxGTEFHLFBBU1MNCmJhZF93YXJuaW5nLnBuZyxGTEFHLFBBU1MsUEFTUyxGTEFHDQo=",
+        "source": "samples",
+        "total": 3
+      },
+      "tool": "batch_verify"
+    },
+    {
+      "args": {},
+      "kind": "tool_call",
+      "tool": "list_flagged"
+    },
+    {
+      "kind": "message",
+      "text": [
+        {
+          "text": "Great! The batch verification is complete. Here's the summary:\n\n**Batch Results:**\n- **Total labels:** 3\n- **Passed:** 1\n- **Flagged:** 2\n- **Errors:** 0\n\nNow let me pull up the detailed list of flagged items:",
+          "type": "text"
+        },
+        {
+          "caller": {
+            "type": "direct"
+          },
+          "id": "toolu_01X3JpZ4TKecjuejdugryfe5",
+          "input": {},
+          "name": "list_flagged",
+          "type": "tool_use"
+        }
+      ]
+    },
+    {
+      "kind": "tool_result",
+      "result": {
+        "count": 2,
+        "flagged": [
+          {
+            "filename": "abv_mismatch.png",
+            "status": "flag"
+          },
+          {
+            "filename": "bad_warning.png",
+            "status": "flag"
+          }
+        ]
+      },
+      "tool": "list_flagged"
+    },
+    {
+      "kind": "message",
+      "text": "**Flagged Labels:**\n\n1. **abv_mismatch.png** \u2014 FLAGGED\n   - The alcohol content field failed verification\n\n2. **bad_warning.png** \u2014 FLAGGED\n   - The government health warning field failed verification\n\n**Passed:**\n- **clean_pass.png** \u2014 All fields passed\n\nWould you like me to extract the raw text from either of the flagged labels to see what the scanner read, or would you like me to explain the specific regulatory violations for each flag?"
+    }
+  ]
+}
