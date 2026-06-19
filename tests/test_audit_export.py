@@ -87,6 +87,30 @@ def test_export_empty_log_has_header_only():
     assert list(csv.reader(io.StringIO(csv_text))) == [audit_export.COLUMNS]
 
 
+def test_formula_injection_in_reason_is_neutralized():
+    # A reason beginning with a formula trigger must be defused with a leading
+    # apostrophe in BOTH formats so it can't execute when opened in a spreadsheet.
+    payload = "=cmd|'/c calc'!A1"
+    audit.record("agent-user", "override", "r9", "FLAG", "PASS", payload)
+    rows = audit.all_rows()
+
+    csv_rows = list(csv.DictReader(io.StringIO(audit_export.audit_to_csv(rows))))
+    assert csv_rows[-1]["reason"] == "'" + payload          # CSV defused
+    assert csv_rows[-1]["actor"] == "agent-user"            # benign cell untouched
+
+    wb = load_workbook(io.BytesIO(audit_export.audit_to_xlsx(rows)))
+    last = list(wb.active.iter_rows(values_only=True))[-1]
+    assert last[audit_export.COLUMNS.index("reason")] == "'" + payload   # XLSX identical
+
+
+@pytest.mark.parametrize("trigger", ["=", "+", "-", "@"])
+def test_all_formula_triggers_defused(trigger):
+    audit.record("agent-user", "override", "rX", "FLAG", "PASS", trigger + "danger")
+    csv_rows = list(csv.DictReader(io.StringIO(
+        audit_export.audit_to_csv(audit.all_rows()))))
+    assert csv_rows[-1]["reason"] == "'" + trigger + "danger"
+
+
 def test_export_tool_is_plain_read_not_gated():
     names = {t.name for t in T.READ_TOOLS}
     assert "export_audit_log" in names

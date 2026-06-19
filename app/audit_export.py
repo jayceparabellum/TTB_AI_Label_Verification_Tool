@@ -19,11 +19,23 @@ from openpyxl import Workbook
 COLUMNS = ["id", "ts", "actor", "action", "target_result_id",
            "old_verdict", "new_verdict", "reason"]
 
+# Leading characters a spreadsheet treats as the start of a formula. The free-text
+# `reason` field is user-controlled, so a value like "=cmd|'/c calc'!A1" could execute
+# on open. We neutralize in the shared cell formatter, so CSV and XLSX get the same
+# treatment and still carry identical data (CWE-1236 / OWASP CSV injection).
+_FORMULA_TRIGGERS = "=+-@\t\r"
+
 
 def _cell(row: dict, col: str) -> str:
-    """One cell, with None rendered as an empty string (CSV/XLSX have no null)."""
+    """One cell, with None as empty string (CSV/XLSX have no null) and any formula-
+    triggering leading character defused with a leading apostrophe."""
     val = row.get(col)
-    return "" if val is None else str(val)
+    if val is None:
+        return ""
+    s = str(val)
+    if s and s[0] in _FORMULA_TRIGGERS:
+        return "'" + s
+    return s
 
 
 def audit_to_csv(rows) -> str:
