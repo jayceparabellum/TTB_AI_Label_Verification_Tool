@@ -60,6 +60,31 @@ def test_cite_or_refuse_covered_by_a_rag_case():
     assert rag, "need at least one RAG cite-or-refuse case"
 
 
+def test_override_result_case_is_a_gated_write():
+    c = next((c for c in AC.ROSTER if c.id == "override_result_gated"), None)
+    assert c is not None, "override_result roster case missing"
+    assert c.expected_tool == "override_result"
+    assert c.expected_tool in WRITE_TOOL_NAMES
+    assert c.is_write is True
+    assert AC.INV_CONFIRM_GATE in c.invariants
+    assert AC.INV_TOOL_ROUTING in c.invariants
+    # A WRITE override must not claim cite-or-refuse or verdict-verbatim.
+    assert AC.INV_CITE_OR_REFUSE not in c.invariants
+    assert AC.INV_VERDICT_VERBATIM not in c.invariants
+
+
+def test_validate_class_type_case_is_advisory_read():
+    c = next((c for c in AC.ROSTER if c.id == "validate_class_type_advisory"), None)
+    assert c is not None, "validate_class_type roster case missing"
+    assert c.expected_tool == "validate_class_type"
+    assert c.expected_tool in _TOOL_NAMES
+    assert c.expected_tool not in WRITE_TOOL_NAMES   # it's a READ
+    assert c.is_write is False
+    assert c.invariants == frozenset({AC.INV_TOOL_ROUTING})
+    # Advisory class/type is NOT a cite-or-refuse RAG tool.
+    assert AC.INV_CITE_OR_REFUSE not in c.invariants
+
+
 def test_snapshot_round_trips_a_representative_transcript(tmp_path):
     snap = AC.Snapshot(
         case_id="verify_label_flag",

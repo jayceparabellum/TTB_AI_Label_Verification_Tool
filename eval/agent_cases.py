@@ -146,6 +146,35 @@ ROSTER: list[AgentEvalCase] = [
         expected_tool="explain_flag",
         invariants=frozenset({INV_TOOL_ROUTING, INV_CITE_OR_REFUSE}),
     ),
+    # override_result — a WRITE: the user asks to override a flagged result, so the
+    # confirm gate must fire before the override is written to the audit log. No
+    # verdict-verbatim/cite-or-refuse here — the load-bearing checks are that it
+    # routes to override_result and pauses for human approval (it never auto-overrides).
+    AgentEvalCase(
+        id="override_result_gated",
+        message=(
+            "I've manually reviewed the flagged Stone's Throw label and it's actually "
+            "fine — please override that result to PASS, reason: ABV reads correctly on "
+            "the physical sample, the scanner misread it."
+        ),
+        expected_tool="override_result",
+        invariants=frozenset({INV_TOOL_ROUTING, INV_CONFIRM_GATE}),
+        is_write=True,
+        thread_id="eval-override",
+    ),
+    # validate_class_type — advisory class/type check (READ). It returns OK/REVIEW +
+    # citations but is NOT a regulatory_lookup/explain_flag cite-or-refuse tool, so we
+    # check only that it routes correctly (no cite_or_refuse invariant — see the
+    # _RAG_TOOLS note in run_agent_eval.py).
+    AgentEvalCase(
+        id="validate_class_type_advisory",
+        message=(
+            "A wine label claims the class/type designation 'Meritage' — is that a "
+            "recognized standard of identity, or does it need review?"
+        ),
+        expected_tool="validate_class_type",
+        invariants=frozenset({INV_TOOL_ROUTING}),
+    ),
     # NOTE: an agent-level "refused" case is intentionally omitted. The corpus +
     # retrieval threshold answers nearly every in-domain phrasing (so a routed-AND-
     # refused question can't be reliably constructed), and a clearly out-of-domain
