@@ -106,9 +106,12 @@ _IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff"
 
 
 def _thread_bytes(thread_id: str) -> int:
+    """Cumulative bytes a thread has staged — uploaded images plus the batch CSV —
+    so the per-thread cap reflects everything held in memory for this chat."""
     from agent.images import STORE, STAGING
-    ids = (STAGING._by_thread.get(thread_id) or {}).get("image_ids", [])
-    return sum(len(STORE.get(i) or b"") for i in ids)
+    entry = STAGING._by_thread.get(thread_id) or {}
+    image_bytes = sum(len(STORE.get(i) or b"") for i in entry.get("image_ids", []))
+    return image_bytes + len(entry.get("batch_csv") or b"")
 
 
 @app.post("/agent/upload")

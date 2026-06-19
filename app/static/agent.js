@@ -27,6 +27,18 @@
     return el;
   }
 
+  // Clickable "Verify this label" suggestion after an upload (rendered live).
+  function renderSuggest(text, fill) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip chat-suggest";
+    b.textContent = text;
+    b.addEventListener("click", function () {
+      input.value = fill; input.focus(); b.remove();
+    });
+    log.appendChild(b);
+    log.scrollTop = log.scrollHeight;
+  }
+
   // Batch results-CSV download button (rendered live; not persisted).
   function renderDownload(dl) {
     const a = document.createElement("a");
@@ -133,7 +145,8 @@
       (data.items || []).forEach(function (it) {
         if (it.kind === "image") {
           attached = { id: it.id, name: it.name }; renderAttachment();
-          bubble("tool", "🖼 Attached " + it.name + " — tell me the brand and ABV to verify it.");
+          bubble("tool", "🖼 Attached " + it.name + ".");
+          renderSuggest("Verify this label", "Verify this label");
         } else if (it.kind === "csv") {
           bubble("tool", "📎 " + it.name + " (" + it.rows + " row" + (it.rows === 1 ? "" : "s") +
                          ") staged — drop the matching images, then say “verify all of these”.");
@@ -157,6 +170,15 @@
   log.addEventListener("drop", function (e) {
     e.preventDefault(); log.classList.remove("drag");
     if (e.dataTransfer && e.dataTransfer.files) uploadFiles(e.dataTransfer.files);
+  });
+  // paste an image straight from the clipboard (e.g. a screenshot of a label)
+  document.addEventListener("paste", function (e) {
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    const files = [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].kind === "file") { const f = items[i].getAsFile(); if (f) files.push(f); }
+    }
+    if (files.length) { e.preventDefault(); uploadFiles(files); }
   });
 
   document.querySelectorAll(".chip").forEach(function (chip) {

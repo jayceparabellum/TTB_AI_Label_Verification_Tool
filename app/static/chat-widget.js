@@ -72,6 +72,20 @@
     no.addEventListener("click", function () { card.remove(); dropConfirm(); resume("cancel"); });
   }
 
+  // A clickable "Verify this label" suggestion after an upload (rendered live, not
+  // persisted): clicking pre-fills the box and focuses it so the user just adds the
+  // claimed brand/ABV. The assistant still drives the verdict — this is only a nudge.
+  function renderSuggest(text, fill) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "cw-chip cw-suggest";
+    b.textContent = text;
+    b.addEventListener("click", function () {
+      input.value = fill; input.focus(); b.remove();
+    });
+    log.appendChild(b);
+    log.scrollTop = log.scrollHeight;
+  }
+
   // A batch results-CSV download button (rendered live; the blob is not persisted
   // to the transcript to keep sessionStorage small — re-run the batch to regenerate).
   function renderDownload(dl) {
@@ -126,7 +140,8 @@
       (data.items || []).forEach(function (it) {
         if (it.kind === "image") {
           attached = { id: it.id, name: it.name }; saveAttach(); renderAttachment();
-          pushMsg("tool", "🖼 Attached " + it.name + " — tell me the brand and ABV to verify it.");
+          pushMsg("tool", "🖼 Attached " + it.name + ".");
+          renderSuggest("Verify this label", "Verify this label");
         } else if (it.kind === "csv") {
           pushMsg("tool", "📎 " + it.name + " (" + it.rows + " row" + (it.rows === 1 ? "" : "s") +
                           ") staged — drop the matching images, then say “verify all of these”.");
@@ -154,6 +169,16 @@
   panel.addEventListener("drop", function (e) {
     e.preventDefault(); root.classList.remove("cw-dragging");
     if (e.dataTransfer && e.dataTransfer.files) uploadFiles(e.dataTransfer.files);
+  });
+
+  // paste an image straight from the clipboard (e.g. a screenshot of a label)
+  panel.addEventListener("paste", function (e) {
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    const files = [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].kind === "file") { const f = items[i].getAsFile(); if (f) files.push(f); }
+    }
+    if (files.length) { e.preventDefault(); uploadFiles(files); }
   });
 
   // --- SSE plumbing (mirrors agent.js) --------------------------------------
