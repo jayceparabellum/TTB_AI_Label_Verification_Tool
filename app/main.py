@@ -128,6 +128,28 @@ async def agent_upload(thread_id: str = Form(...), files: list[UploadFile] = Fil
         name = f.filename or "file"
         ct = (f.content_type or "").lower()
         lname = name.lower()
+        if _is_zip(name, ct):
+            # A .zip is a container — unzip it and stage every image, so a zipped
+            # folder and loose images take the same batch path. The per-file cap
+            # doesn't apply to the archive; ingest enforces per-member + total
+            # size guards, and the thread cap applies to the extracted total.
+            try:
+                extracted = ingest.extract_images_from_zip(data)
+            except ingest.ZipIngestError as exc:
+                items.append({"kind": "rejected", "name": name, "reason": str(exc)})
+                continue
+            total = sum(len(b) for _, b in extracted)
+            if used + total > _MAX_THREAD_BYTES:
+                items.append({"kind": "rejected", "name": name,
+                              "reason": "this chat has reached its 50 MB upload limit"})
+                continue
+            for img_name, img_bytes in extracted:
+                image_id = STORE.put(img_bytes)
+                STAGING.add_image(thread_id, image_id)
+                STAGING.add_batch_image(thread_id, img_name, img_bytes)
+            used += total
+            items.append({"kind": "zip", "name": name, "extracted": len(extracted)})
+            continue
         if len(data) > _MAX_FILE_BYTES:
             items.append({"kind": "rejected", "name": name,
                           "reason": "too large — 10 MB max per file"})
