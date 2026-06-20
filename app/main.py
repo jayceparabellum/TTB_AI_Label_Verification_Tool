@@ -93,6 +93,7 @@ templates.env.globals["flag_reason"] = reasons_mod.explain
 
 
 @app.get("/chat", response_class=HTMLResponse)
+@app.get("/assistant", response_class=HTMLResponse)  # alias for /chat
 def chat_page(request: Request):
     return templates.TemplateResponse(
         request, "agent.html", {"nav": "chat", "chips": PROMPT_CHIPS},

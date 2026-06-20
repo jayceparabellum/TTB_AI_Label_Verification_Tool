@@ -53,6 +53,11 @@ def test_chat_page_renders_with_chips_and_nav():
     assert "chip" in html and 'href="/chat"' in html
 
 
+def test_assistant_alias_serves_the_chat_page():
+    # /assistant is an alias for /chat — same rendered page.
+    assert client.get("/assistant").text == client.get("/chat").text
+
+
 def test_popout_widget_on_every_page_except_chat():
     # The global pop-out assistant rides on every page (with the same prompt chips
     # + its client script) but is suppressed on the dedicated /chat page so there's
