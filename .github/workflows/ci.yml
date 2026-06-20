@@ -29,14 +29,14 @@ jobs:
       # a model, but this keeps any direct retrieval path off the dense backend).
       RAG_DENSE: "off"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Tesseract (OCR runtime for pytesseract)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends tesseract-ocr fonts-dejavu-core
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -57,9 +57,9 @@ jobs:
     name: dependency CVE audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
