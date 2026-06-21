@@ -126,3 +126,30 @@ def test_chat_verify_text_tool_skips_optional_when_blank():
     out = run_verify_text(LABEL, "Stone's Throw", "5.0")
     assert [f["field"] for f in out["fields"]] == \
         ["brand", "alcohol_content", "government_warning"]
+
+
+# --- regressions from the session quality review -----------------------------
+
+def test_short_absent_class_designations_defer_not_flag():
+    # 'Gin'/'Rum'/'Port' are real designations but absent here; they must never
+    # confidently FLAG on incidental character overlap (zero-confident-wrong).
+    label = "BARREL OAK\nCabernet Sauvignon\nNapa Valley\n750 mL"
+    for designation in ("Gin", "Rum", "Port"):
+        r = match_class_type(designation, label)
+        assert r.inconclusive, designation                      # defers to REVIEW...
+        assert not (not r.passed and not r.inconclusive), designation  # ...never FLAG
+
+
+def test_discriminating_class_designation_still_flags_when_different():
+    r = match_class_type("Cabernet Sauvignon Reserve",
+                         "BARREL OAK\nCabernet Sauvignon\n750 mL")
+    assert not r.passed and not r.inconclusive                  # present-but-different
+
+
+def test_thousands_separator_net_contents_matches():
+    for claim in ("1 L", "1000 mL", "1,000 mL"):
+        assert match_net_contents(claim, "BIG BOTTLE\n1,000 mL").passed, claim
+
+
+def test_eu_decimal_comma_net_contents_still_parses():
+    assert match_net_contents("0.75 L", "X\n0,75 L").passed     # 0,75 L == 750 mL

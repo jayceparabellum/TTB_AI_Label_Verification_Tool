@@ -114,6 +114,20 @@ def test_truncated_tail_is_detected_against_checkpoint():
     assert res.broken_position == 4               # first missing position (1-based)
 
 
+def test_self_consistent_tail_alteration_is_classified_altered():
+    # The realistic attack: edit the LAST row and recompute its row_hash so the
+    # per-row + linkage checks pass; only the checkpoint head still holds the old hash.
+    # This must report 'altered' at the tail row — not 'truncated' with "0 missing".
+    ids = _seed(4)
+    tail = audit.all_rows()[-1]
+    forged = {**{k: tail[k] for k in audit._CONTENT}, "reason": "TAMPERED"}
+    forged_hash = audit._row_hash(tail["prev_hash"], forged)
+    _exec("UPDATE audit SET reason = 'TAMPERED', row_hash = :h WHERE id = :i",
+          h=forged_hash, i=ids[-1])
+    res = audit.verify()
+    assert not res.ok and res.kind == "altered" and res.broken_position == ids[-1]
+
+
 # --- export carries a verifiable chain ---------------------------------------
 
 def test_export_includes_hash_columns_and_stays_consistent():
