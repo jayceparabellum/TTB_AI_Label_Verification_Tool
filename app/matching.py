@@ -19,7 +19,7 @@ from rapidfuzz import fuzz
 
 from .reference import OFFICIAL_GOVERNMENT_WARNING, WARNING_HEADER
 
-# --- Tunables (see PRD-v1.md) -------------------------------------------------
+# --- Tunables (see PRD.md) ----------------------------------------------------
 # Brand similarity is measured AFTER normalization (case/punct/whitespace
 # stripped), so trivial formatting differences already score 100. The cutoff
 # therefore only governs residual OCR noise.

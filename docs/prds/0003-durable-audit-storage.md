@@ -138,6 +138,6 @@ production:
 
 ## References
 
-- [PRD-v2.md](../../PRD-v2.md) — "Open questions": durable, tamper-evident audit storage.
+- [PRD.md](../../PRD.md) — "Open questions": durable, tamper-evident audit storage.
 - [docs/prds/0001-audit-log-export.md](0001-audit-log-export.md) — the export this must keep working.
 - `agent/audit.py`, `app/agent_chat.py`, `app/audit_export.py`, `agent/config.py`.
