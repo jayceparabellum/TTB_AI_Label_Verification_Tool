@@ -33,6 +33,52 @@ The expected warning defaults to the official §16.21 text, so an agent never ty
 
 ---
 
+## Sample data
+
+Every input surface ships with ready-to-run sample data so you can try the app
+without supplying your own labels. The files are served as plain static assets,
+so they download from any running instance (including the [live demo](https://ttb-label-verification-9q01.onrender.com))
+with no account or login.
+
+| Surface | What to download | Path on the app |
+|---------|------------------|-----------------|
+| **Single label** (`/`) | Three generated labels — a clean PASS, a wrong-ABV FLAG, a bad-warning FLAG | `/static/samples/clean_pass.png`, `/static/samples/abv_mismatch.png`, `/static/samples/bad_warning.png` |
+| **Batch** (`/batch`) | A ready-to-run batch — 25 real alcohol labels (`.zip`) + a matching CSV | `/static/alcohol_labels.zip`, `/static/batch-template-filled.csv` |
+| **Batch** (`/batch`) | A blank CSV template to fill in for your own batch | `/static/batch-template.csv` |
+
+**From the browser (easiest).** On the running app, the samples are one click away:
+
+- On the home page (`/`), use the **"Verify the … sample"** chips to run a single
+  sample, or right-click → *Save image as* on any sample thumbnail to download it.
+- On the batch page (`/batch`), scroll to the **"Try it with sample data"** card and
+  click **⬇ Sample labels (.zip, 25 images)** and **⬇ Matching CSV** — then upload
+  both back into the form above to see a full 25-label batch run end to end.
+
+**From the command line.** Point the host at your instance (defaults below use the
+local dev server):
+
+```bash
+HOST=http://127.0.0.1:8000   # or https://ttb-label-verification-9q01.onrender.com
+
+# batch sample (zip of 25 labels + the CSV that matches them)
+curl -O "$HOST/static/alcohol_labels.zip"
+curl -O "$HOST/static/batch-template-filled.csv"
+
+# blank batch template
+curl -O "$HOST/static/batch-template.csv"
+
+# single-label samples
+for f in clean_pass abv_mismatch bad_warning; do curl -O "$HOST/static/samples/$f.png"; done
+```
+
+The 25-label zip and its CSV are a matched, self-consistent batch (every CSV row
+names a file in the zip and vice-versa, within the 25-label cap), so uploading the
+two together verifies cleanly. The single-label samples are generated from
+`scripts/generate_samples.py` (run automatically in [Quick start](#quick-start)
+below); the batch assets ship committed under `app/static/`.
+
+---
+
 ## Quick start
 
 Requires Python 3.12 and Tesseract OCR.
