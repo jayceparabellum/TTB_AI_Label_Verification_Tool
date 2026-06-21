@@ -25,9 +25,30 @@ _log = logging.getLogger("ttb.agent_chat")
 
 # Seed bundled samples so prompt chips / the demo can verify without an upload.
 STORE.seed_samples()
-config.ensure_data_dir()
-# One long-lived connection -> one checkpointer for the process (POC, local file).
-_SAVER = SqliteSaver(sqlite3.connect(config.CHECKPOINT_DB, check_same_thread=False))
+
+
+def _make_saver():
+    """Build the process-wide checkpointer for the chat graph.
+
+    DATABASE_URL set to a Postgres DSN -> a durable Postgres checkpointer, so
+    conversation state (and the confirm gate's interrupt/resume) survives the
+    redeploys that wipe an ephemeral disk. Otherwise a local SQLite file (the
+    offline default). Postgres support is lazy-imported, so the base install
+    needs no Postgres driver.
+    """
+    url = config.DATABASE_URL
+    if url and config.is_postgres_url(url):
+        from langgraph.checkpoint.postgres import PostgresSaver
+        # psycopg accepts Render's postgres:// DSN verbatim (unlike SQLAlchemy).
+        saver = PostgresSaver.from_conn_string(url).__enter__()
+        saver.setup()                # idempotent: create the checkpoint tables
+        return saver
+    config.ensure_data_dir()
+    # One long-lived connection -> one checkpointer for the process (local file).
+    return SqliteSaver(sqlite3.connect(config.CHECKPOINT_DB, check_same_thread=False))
+
+
+_SAVER = _make_saver()
 
 _OFFLINE_MSG = ("The assistant is offline right now — the button verifier on the "
                "home page still works for every label.")
