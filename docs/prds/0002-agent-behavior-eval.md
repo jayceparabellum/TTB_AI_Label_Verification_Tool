@@ -1,6 +1,6 @@
 # PRD 0002: Agent Behavior Eval (record → replay)
 
-- **Status:** Draft
+- **Status:** Implemented (2026-06-19)
 - **Author:** jayceparabellum
 - **Created:** 2026-06-19
 
