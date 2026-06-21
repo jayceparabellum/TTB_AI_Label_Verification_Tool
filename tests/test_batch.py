@@ -116,8 +116,24 @@ def test_summary_matches_row_tally():
 def test_results_to_csv_round_trips_through_parse():
     res = run_batch([_img("clean_pass")], _csv("clean_pass.png,Stone's Throw,5.0"))
     out = results_to_csv(res)
-    assert out.splitlines()[0] == "filename,overall,brand,alcohol_content,government_warning"
+    assert out.splitlines()[0] == ("filename,overall,brand,alcohol_content,"
+                                   "government_warning,net_contents,class_type")
     assert "clean_pass.png" in out
+
+
+def test_batch_adjudicates_optional_columns_when_present():
+    res = run_batch(
+        [_img("clean_pass")],
+        _csv("clean_pass.png,Stone's Throw,5.0,750 mL,Stone's Throw",
+             header="filename,brand,alcohol_content,net_contents,class_type"))
+    names = [f.field for f in res.rows[0].fields]
+    assert "net_contents" in names and "class_type" in names
+
+
+def test_batch_skips_optional_columns_when_absent():
+    res = run_batch([_img("clean_pass")], _csv("clean_pass.png,Stone's Throw,5.0"))
+    assert [f.field for f in res.rows[0].fields] == \
+        ["brand", "alcohol_content", "government_warning"]
 
 
 def test_static_template_parses():

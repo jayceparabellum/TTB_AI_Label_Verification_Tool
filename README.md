@@ -358,11 +358,12 @@ does not do:
   input is the legible, roughly flat label an agent files with a COLA application;
   glare/reflection-heavy bottle photography is a documented stress set, not the target.
 - **Brand, alcohol content, and the §16.21 warning are the always-on adjudicated
-  fields.** **Net contents** and **class/type** are also adjudicated on the
-  single-label path when a claimed value is supplied (optional inputs): net contents
-  as a metric numeric match, class/type as a fuzzy label-presence check (NOT
-  standards-of-identity correctness). Each uses a safe PASS / FLAG / defer-to-NEEDS-
-  REVIEW verdict and is never flagged when omitted. Producer and country remain
+  fields.** **Net contents** and **class/type** are also adjudicated when a claimed
+  value is supplied — across every surface: the single-label image/text forms, the
+  batch CSV (optional `net_contents`/`class_type` columns), and the chat verify tools.
+  Net contents is a metric numeric match; class/type is a fuzzy label-presence check
+  (NOT standards-of-identity correctness). Each uses a safe PASS / FLAG / defer-to-
+  NEEDS-REVIEW verdict and is never flagged when omitted. Producer and country remain
   best-effort raw text, clearly marked "not adjudicated."
 - **Local Tesseract is a hard constraint** (the deployment blocks outbound ML/cloud
   calls), so OCR quality is Tesseract's; an unreadable field **safely defers** to a

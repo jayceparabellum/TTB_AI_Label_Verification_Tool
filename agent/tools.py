@@ -49,7 +49,8 @@ def _serialize(r) -> dict:
     }
 
 
-def run_verify(image_id: str | None, brand: str, alcohol_content: str) -> dict:
+def run_verify(image_id: str | None, brand: str, alcohol_content: str,
+               net_contents: str = "", class_type: str = "") -> dict:
     """Deterministic verification, serialized verbatim. Shared by the tool and by
     tests (so the parity assertion needs no InjectedState plumbing)."""
     if not image_id:
@@ -57,20 +58,22 @@ def run_verify(image_id: str | None, brand: str, alcohol_content: str) -> dict:
     data = STORE.get(image_id)
     if data is None:
         return {"error": _UNREADABLE}
-    r = _core_verify_label(data, brand=brand, alcohol_content=alcohol_content)
+    r = _core_verify_label(data, brand=brand, alcohol_content=alcohol_content,
+                           net_contents=net_contents, class_type=class_type)
     return _serialize(r)
 
 
 def run_verify_text(label_text: str, brand: str, alcohol_content: str,
-                    expected_warning: str = "") -> dict:
+                    expected_warning: str = "", net_contents: str = "",
+                    class_type: str = "") -> dict:
     """Deterministic text re-verification, serialized verbatim. Shared by the tool
     and by tests so the parity assertion needs no InjectedState plumbing. The pasted
     text IS the label text (the user supplied it), so there is no OCR step."""
     if not _ocr.is_readable(label_text):
         return {"error": _UNREADABLE_TEXT}
     kwargs = {"expected_warning": expected_warning} if expected_warning else {}
-    r = _core_reverify_text(label_text, brand=brand,
-                            alcohol_content=alcohol_content, **kwargs)
+    r = _core_reverify_text(label_text, brand=brand, alcohol_content=alcohol_content,
+                            net_contents=net_contents, class_type=class_type, **kwargs)
     return _serialize(r)
 
 
@@ -107,13 +110,20 @@ def verify_label(
     brand: str,
     alcohol_content: str,
     state: Annotated[dict, InjectedState],
+    net_contents: str = "",
+    class_type: str = "",
 ) -> dict:
     """Verify the currently-loaded label image against the claimed brand and
     alcohol content. Returns the deterministic per-field PASS/FLAG verdict — this
     is the authoritative result, not your opinion. Any FLAG carries the controlling
     27 CFR regulation (grounded + cited) so you can explain *why* it failed. The
-    image is taken from the active session (you do not supply it)."""
-    result = run_verify(state.get("active_image_id"), brand, alcohol_content)
+    image is taken from the active session (you do not supply it).
+
+    Optionally pass net_contents (e.g. '750 mL') and/or class_type (e.g. 'Cabernet
+    Sauvignon') when the user states them — each is then adjudicated too; omit them
+    and they are simply not checked."""
+    result = run_verify(state.get("active_image_id"), brand, alcohol_content,
+                        net_contents=net_contents, class_type=class_type)
     return _attach_regulations(result)
 
 
@@ -123,14 +133,20 @@ def verify_text(
     brand: str,
     alcohol_content: str,
     expected_warning: str = "",
+    net_contents: str = "",
+    class_type: str = "",
 ) -> dict:
     """Verify label TEXT the user pasted or typed (no image) against the claimed
     brand and alcohol content. Use this when the user gives you the label's wording
     directly instead of an image. Returns the deterministic per-field PASS/FLAG
     verdict — this is the authoritative result, not your opinion. Any FLAG carries
     the controlling 27 CFR regulation (grounded + cited) so you can explain why it
-    failed. The label_text you pass IS the wording to check, verbatim."""
-    result = run_verify_text(label_text, brand, alcohol_content, expected_warning)
+    failed. The label_text you pass IS the wording to check, verbatim.
+
+    Optionally pass net_contents and/or class_type when the user states them — each
+    is adjudicated too; omit them and they are not checked."""
+    result = run_verify_text(label_text, brand, alcohol_content, expected_warning,
+                             net_contents=net_contents, class_type=class_type)
     return _attach_regulations(result)
 
 

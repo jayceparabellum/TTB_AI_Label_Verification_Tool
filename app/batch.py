@@ -34,6 +34,8 @@ class CsvFormatError(Exception):
 class ClaimedRow:
     brand: str
     alcohol_content: str
+    net_contents: str = ""      # optional — adjudicated only when the CSV supplies it
+    class_type: str = ""        # optional — same
 
 
 @dataclass
@@ -90,7 +92,9 @@ def parse_csv(data: bytes):
             rows.pop(fn, None)
             continue
         rows[fn] = ClaimedRow(brand=norm.get("brand", ""),
-                              alcohol_content=norm.get("alcohol_content", ""))
+                              alcohol_content=norm.get("alcohol_content", ""),
+                              net_contents=norm.get("net_contents", ""),
+                              class_type=norm.get("class_type", ""))
     return rows, duplicates
 
 
@@ -147,7 +151,9 @@ def run_batch(images: list[tuple[str, bytes]], csv_bytes: bytes,
                                 message="No CSV row matches this image's filename."))
             continue
         result = verify_label(data, brand=claimed.brand,
-                              alcohol_content=claimed.alcohol_content)
+                              alcohol_content=claimed.alcohol_content,
+                              net_contents=claimed.net_contents,
+                              class_type=claimed.class_type)
         out.append(BatchRow(filename, _status_for(result),
                             fields=result.fields, message=result.message))
 
@@ -164,18 +170,29 @@ def run_batch(images: list[tuple[str, bytes]], csv_bytes: bytes,
     return BatchResult(rows=out, summary=_summarize(out))
 
 
+def _verdict(f: FieldResult) -> str:
+    """Three-way per-field verdict for the export: a deferred (inconclusive) field is
+    REVIEW, not FLAG — so the CSV mirrors what the UI shows."""
+    return "PASS" if f.passed else ("REVIEW" if f.inconclusive else "FLAG")
+
+
 def results_to_csv(result: BatchResult) -> str:
-    """Render a batch result as a CSV string for download (filename + verdicts)."""
+    """Render a batch result as a CSV string for download (filename + verdicts).
+
+    net_contents and class_type columns stay blank for rows that didn't claim them
+    (they're optional, adjudicated only when the CSV supplies a value)."""
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow(["filename", "overall", "brand", "alcohol_content",
-                     "government_warning"])
+                     "government_warning", "net_contents", "class_type"])
     for row in result.rows:
-        verdicts = {f.field: ("PASS" if f.passed else "FLAG") for f in row.fields}
+        verdicts = {f.field: _verdict(f) for f in row.fields}
         writer.writerow([
             row.filename, row.status.upper(),
             verdicts.get("brand", ""),
             verdicts.get("alcohol_content", ""),
             verdicts.get("government_warning", ""),
+            verdicts.get("net_contents", ""),
+            verdicts.get("class_type", ""),
         ])
     return buf.getvalue()
