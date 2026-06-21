@@ -153,3 +153,31 @@ def test_thousands_separator_net_contents_matches():
 
 def test_eu_decimal_comma_net_contents_still_parses():
     assert match_net_contents("0.75 L", "X\n0,75 L").passed     # 0,75 L == 750 mL
+
+
+# --- U3: standards-of-identity recognition wired into the verdict -------------
+
+def _class_field(result):
+    return next(f for f in result.fields if f.field == "class_type")
+
+
+def test_recognized_and_present_class_type_passes():
+    # "Cabernet Sauvignon" is a recognized wine class/type and is on LABEL.
+    r = reverify_text(LABEL, "Stone's Throw", "5.0", class_type="Cabernet Sauvignon")
+    assert _class_field(r).passed
+
+
+def test_unrecognized_present_class_type_needs_review_never_pass_or_flag():
+    # An unrecognized designation that IS on the label must NOT confidently PASS
+    # (and never confident-FLAG) — it defers to NEEDS REVIEW.
+    label = "Stone's Throw\nUnicorn Juice\nALC 5.0% BY VOL\n" + OFFICIAL_GOVERNMENT_WARNING
+    r = reverify_text(label, "Stone's Throw", "5.0", class_type="Unicorn Juice")
+    ct = _class_field(r)
+    assert not ct.passed and ct.inconclusive            # NEEDS REVIEW, not PASS
+    assert r.needs_review
+
+
+def test_recognized_but_absent_class_type_defers():
+    # "Bourbon" is recognized but not on this wine label → defer, not PASS.
+    r = reverify_text(LABEL, "Stone's Throw", "5.0", class_type="Bourbon")
+    assert not _class_field(r).passed
