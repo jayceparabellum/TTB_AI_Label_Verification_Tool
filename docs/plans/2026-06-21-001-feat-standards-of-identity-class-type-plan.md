@@ -1,7 +1,7 @@
 ---
 title: "feat: Standards-of-identity validation for class/type designations"
 type: feat
-status: active
+status: completed
 created: 2026-06-21
 deepened: 2026-06-21
 depth: deep

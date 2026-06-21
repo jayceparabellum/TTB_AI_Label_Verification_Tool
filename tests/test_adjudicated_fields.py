@@ -181,3 +181,32 @@ def test_recognized_but_absent_class_type_defers():
     # "Bourbon" is recognized but not on this wine label → defer, not PASS.
     r = reverify_text(LABEL, "Stone's Throw", "5.0", class_type="Bourbon")
     assert not _class_field(r).passed
+
+
+# --- U5: recognition citation/recommendation visible on the web surface -------
+
+def test_web_recognized_class_type_shows_citation():
+    r = client.post("/verify-text", data={
+        "label_text": LABEL, "brand": "Stone's Throw", "alcohol_content": "5.0",
+        "class_type": "Cabernet Sauvignon"})
+    assert r.status_code == 200
+    assert "27 CFR §4.21" in r.text                       # controlling citation surfaced
+
+
+def test_web_unrecognized_class_type_shows_review_recommendation():
+    label = "Stone's Throw\nUnicorn Juice\nALC 5.0% BY VOL\n" + OFFICIAL_GOVERNMENT_WARNING
+    r = client.post("/verify-text", data={
+        "label_text": label, "brand": "Stone's Throw", "alcohol_content": "5.0",
+        "class_type": "Unicorn Juice"})
+    assert r.status_code == 200
+    assert 'result-name">Class/type' in r.text
+    assert "recommend human review" in r.text             # recommendation surfaced
+
+
+# --- U6: spirits coverage at the text level (image fixtures deferred) ---------
+
+def test_recognized_spirits_class_type_passes_when_present():
+    label = ("Old Reserve\nKentucky Straight Bourbon Whiskey\nALC 45% BY VOL\n"
+             + OFFICIAL_GOVERNMENT_WARNING)
+    r = reverify_text(label, "Old Reserve", "45", class_type="Bourbon")
+    assert _class_field(r).passed                          # spirits recognized + present
