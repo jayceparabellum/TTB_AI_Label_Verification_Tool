@@ -50,10 +50,11 @@ def _run(name, args, thread="t"):
     return g, out
 
 
-def test_roster_is_eleven_tools():
-    assert len(T.ALL_TOOLS) == 12
+def test_roster_size():
+    assert len(T.ALL_TOOLS) == 13
     assert "batch_verify" in T.WRITE_TOOL_NAMES
-    assert "validate_class_type" in {t.name for t in T.READ_TOOLS}
+    read_names = {t.name for t in T.READ_TOOLS}
+    assert "validate_class_type" in read_names and "verify_audit_log" in read_names
 
 
 def test_batch_verify_is_gated_then_populates_list_flagged():

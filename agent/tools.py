@@ -317,6 +317,19 @@ def export_audit_log() -> dict:
     }
 
 
+@tool
+def verify_audit_log() -> dict:
+    """Check the INTEGRITY of the append-only audit log — confirm it hasn't been
+    altered, deleted from, inserted into, or truncated since entries were recorded.
+    Returns whether the hash chain is intact and, if not, which entry first broke and
+    how (altered/deleted/inserted/truncated). This is a plain READ — not gated, and it
+    creates no audit entry. Use it when the user asks whether the audit log / decision
+    history is intact, untampered, trustworthy, or verifiable."""
+    v = audit.verify()
+    return {"ok": v.ok, "kind": v.kind, "broken_position": v.broken_position,
+            "message": v.message}
+
+
 _KNOWN_WINE_TYPES = {
     "table wine", "red wine", "white wine", "rose wine", "rosé wine",
     "sparkling wine", "dessert wine", "fortified wine",
@@ -345,7 +358,7 @@ def validate_class_type(claimed_designation: str, beverage_type: str = "wine") -
 
 READ_TOOLS = [verify_label, verify_text, extract_label_fields, verify_warning,
               list_flagged, regulatory_lookup, explain_flag, validate_class_type,
-              export_audit_log]
+              export_audit_log, verify_audit_log]
 WRITE_TOOLS = [override_result, manual_fallback, batch_verify]
 WRITE_TOOL_NAMES = {t.name for t in WRITE_TOOLS}
 ALL_TOOLS = READ_TOOLS + WRITE_TOOLS

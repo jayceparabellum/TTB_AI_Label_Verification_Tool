@@ -29,6 +29,8 @@ SYSTEM_PROMPT = (
     "rule; never recite regulations from memory.\n"
     "- To export, download, or save the audit log / decision history, call "
     "export_audit_log and hand back the files it returns.\n"
+    "- To check whether the audit log is intact / untampered / verifiable, call "
+    "verify_audit_log and report its verdict verbatim.\n"
     "- Explain flags in plain language a non-technical agent can act on."
 )
 
