@@ -103,6 +103,13 @@ RAG_DENSE = os.environ.get("RAG_DENSE", "auto").lower()
 # primary gate and dense is only a high-confidence assist.
 RAG_DENSE_MIN_SIM = float(os.environ.get("RAG_DENSE_MIN_SIM", "0.80"))
 
+# Where the dense vectors live. "memory" (default) = an exact in-memory numpy cosine,
+# rebuilt at startup — fine at this corpus size and needs no extra dependency. "chroma"
+# = a persistent Chroma store at CHROMA_DIR, so embeddings survive restarts and aren't
+# recomputed on each boot; opt-in because chromadb is an extra (optional) install. Both
+# are fully local/offline (chromadb telemetry is disabled).
+RAG_DENSE_STORE = os.environ.get("RAG_DENSE_STORE", "memory").lower()
+
 # --- Offline guard ------------------------------------------------------------
 # When set, code paths that would reach the public internet must refuse. The
 # corpus is fetched at build time and cached; runtime is fully local.

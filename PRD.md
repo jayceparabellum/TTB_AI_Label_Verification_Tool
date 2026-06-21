@@ -254,7 +254,9 @@ string for the warning check, defaulted so an agent never types it:
   shows the graceful offline message and the button verifier is the path.
 - **Dense BGE-small** retrieval is optional (`pip install sentence-transformers`,
   `RAG_DENSE=auto`); default is BM25-only, which is fully offline and deterministic.
-  Chroma persistence is deferred (the corpus is small enough for exact in-memory cosine).
+  A persistent Chroma store is available opt-in (`RAG_DENSE_STORE=chroma`,
+  `pip install chromadb`) so embeddings survive restarts; the default stays in-memory
+  cosine (the corpus is small enough not to need it).
 - **Curated corpus, not full live eCFR:** Parts 4/5/7/16 labeling slices; §16.21 is
   verbatim. Section **numbers were verified against the live eCFR structure API (issue
   date 2026-06-10)**; chunk **wording is a faithful conservative summary** — confirm
