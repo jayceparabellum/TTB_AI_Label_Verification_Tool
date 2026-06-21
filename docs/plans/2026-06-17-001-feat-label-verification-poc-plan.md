@@ -372,5 +372,5 @@ None.
 ## Sources & Research
 
 - Origin: `docs/brainstorms/2026-06-17-label-verification-requirements.md`
-- Product spec: `PRD-v1.md`; vision: `PVD.md`
+- Product spec: `PRD.md` (was `PRD-v1.md`, since consolidated); vision: `PVD.md`
 - 27 CFR §16.21 — verified via Cornell LII (https://www.law.cornell.edu/cfr/text/27/16.21)

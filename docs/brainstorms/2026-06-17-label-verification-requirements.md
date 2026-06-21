@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-17
 - **Status:** Requirements (brainstorm output) — feeds `/scope-lock` then `/ce-plan`
-- **Upstream:** `PVD.md`, `PRD-v1.md`
+- **Upstream:** `PVD.md`, `PRD.md` (was `PRD-v1.md`, since consolidated)
 
 ## Problem & Outcome
 
