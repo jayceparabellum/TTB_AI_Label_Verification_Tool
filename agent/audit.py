@@ -91,7 +91,10 @@ def _row_hash(prev_hash: str, values: dict) -> str:
 _engines: dict[str, Engine] = {}
 _engines_lock = threading.Lock()
 # Serializes the read-tail → compute → insert step within this process so the chain
-# can't fork; the FOR UPDATE tail read extends that ordering across processes/replicas.
+# can't fork. On Postgres the FOR UPDATE tail read extends that ordering across
+# processes/replicas; on SQLite there is no such cross-process guarantee, so the
+# SQLite backend is intended for single-process use (the durable, multi-writer path
+# is Postgres). verify() also takes this lock for a consistent read snapshot.
 _write_lock = threading.Lock()
 
 
@@ -142,8 +145,8 @@ def record(actor: str, action: str, target_result_id: str | None,
     }
     eng = _engine()
     # Serialize the whole read-tail → hash → insert → checkpoint step. The app lock
-    # orders writers in-process; the FOR UPDATE tail read (a no-op on SQLite, which is
-    # single-writer anyway) orders them across processes on Postgres.
+    # orders writers in-process; on Postgres the FOR UPDATE tail read additionally
+    # orders them across processes/replicas (it is a no-op on SQLite — single-process).
     with _write_lock, eng.begin() as conn:
         tail = conn.execute(
             select(_audit.c.row_hash).order_by(_audit.c.id.desc())
@@ -201,7 +204,10 @@ def verify() -> VerifyResult:
     Returns a VerifyResult pinpointing the first break.
     """
     cols = [_audit.c[name] for name in _DUMP_COLS]
-    with _engine().connect() as conn:
+    # Read the rows and the checkpoint under the write lock so a concurrent record()
+    # can't commit between the two queries and yield a rows/checkpoint snapshot that
+    # disagree (which would surface as a transient false tamper verdict).
+    with _write_lock, _engine().connect() as conn:
         rows = [dict(zip(_DUMP_COLS, r)) for r in
                 conn.execute(select(*cols).order_by(_audit.c.id.asc())).all()]
         head = conn.execute(
@@ -222,21 +228,29 @@ def verify() -> VerifyResult:
             return VerifyResult(False, row["id"], "altered",
                                 f"row {row['id']}: content does not match its hash — altered")
         if row["prev_hash"] != expected_prev:
-            # Linkage broke: a row was removed or inserted before this one. Use the
-            # checkpoint count to tell which.
+            # Linkage broke: a row was removed or inserted before this one. The
+            # checkpoint count tells which — but only as a best-effort hint, since a
+            # combined insert+delete preserves the count. Detection (ok=False) is the
+            # authoritative property; the kind label is diagnostic.
             kind = "inserted" if expected_count is not None and len(rows) > expected_count else "deleted"
             return VerifyResult(False, row["id"], kind,
                                 f"row {row['id']}: prev_hash does not link to the prior row — {kind}")
         expected_prev = row["row_hash"]
 
     # Chain is internally valid and linked. Reconcile against the checkpoint to catch
-    # end-truncation or a tampered/extended tail.
+    # end-truncation, an extended tail, or a self-consistent tail-row alteration.
     if head is not None:
-        if len(rows) < expected_count or rows[-1]["row_hash"] != head[1]:
+        if len(rows) < expected_count:
             return VerifyResult(False, len(rows) + 1, "truncated",
                                 f"chain valid but {expected_count - len(rows)} tail row(s) "
                                 "missing vs. checkpoint — truncated")
         if len(rows) > expected_count:
             return VerifyResult(False, expected_count + 1, "inserted",
                                 "more rows than the checkpoint records — inserted at tail")
+        if rows[-1]["row_hash"] != head[1]:
+            # Same count + linked, but the tail hash disagrees with the checkpoint:
+            # the last row was altered and its hash recomputed to stay self-consistent.
+            return VerifyResult(False, rows[-1]["id"], "altered",
+                                f"row {rows[-1]['id']}: tail hash does not match the "
+                                "checkpoint head — altered")
     return VerifyResult(True, None, None, f"chain intact ({len(rows)} rows)")

@@ -189,8 +189,10 @@ def build_dense_backend(chunks: list[Chunk] | None = None,
     """Construct the dense backend, honoring config.RAG_DENSE + config.RAG_DENSE_STORE.
 
     Returns None (BM25-only) when dense is off, or when it's "auto" and
-    sentence-transformers isn't installed. Raises only when "on"/`chroma` is requested
-    without the dependency, so a misconfigured host fails loudly.
+    sentence-transformers isn't installed (this short-circuits before the store check,
+    so RAG_DENSE=auto stays BM25-only even if RAG_DENSE_STORE=chroma). Raises when
+    RAG_DENSE=on lacks sentence-transformers, or RAG_DENSE_STORE=chroma lacks chromadb
+    — a misconfigured host fails loudly rather than silently degrading.
     """
     mode = config.RAG_DENSE
     if mode in {"0", "off", "false", "no"}:

@@ -83,38 +83,42 @@ def normalize_whitespace(text: str) -> str:
     return _WS_RE.sub(" ", text).strip()
 
 
-# --- Brand --------------------------------------------------------------------
-def match_brand(expected: str, ocr_text: str) -> FieldResult:
-    """Fuzzy brand match. Tolerant of case/punctuation/whitespace formatting."""
+# --- Shared fuzzy label-presence (brand + class/type) -------------------------
+def _best_fuzzy_line(expected: str, ocr_text: str) -> tuple[float, str]:
+    """Best fuzzy match of `expected` against any label line (or the whole text).
+
+    partial_ratio finds a string embedded in a *longer* line, but it has two failure
+    modes, so it is used only when the expected string is **discriminating** (>= 5
+    normalized chars) AND the candidate is at least as long:
+      1. A short expected string matches incidental substrings of a busy page
+         ("Bud"/"Gin" inside a longer word) — require it be discriminating.
+      2. A candidate SHORTER than the expected string gets found *inside* it and
+         scores 100 (garbled "i" matching the 'i' in "danIel") — require the
+         candidate be at least as long.
+    Otherwise a close plain ratio is required, which scores noise low. Shared by
+    match_brand and match_class_type so the two can never drift apart."""
     exp_norm = normalize_loose(expected)
     exp_len = len(exp_norm.replace(" ", ""))
+    discriminating = exp_len >= 5
     best_line, best_score = "", 0.0
-
     candidates = [ln.strip() for ln in ocr_text.splitlines() if ln.strip()]
-    # Also consider the whole text as one candidate (handles single-line OCR).
-    candidates.append(ocr_text.strip())
-
-    # partial_ratio finds a brand embedded in a *longer* line, but it scores by
-    # fitting the shorter string inside the longer one — so two failure modes:
-    #   1. For a short brand it matches incidental substrings of a busy page
-    #      ("Bud" inside "...Brewing..."), so require the brand be discriminating.
-    #   2. For ANY brand, a candidate SHORTER than the brand gets found *inside*
-    #      the brand and scores 100 — e.g. garbled OCR "i" matches the 'i' in
-    #      "danIel", falsely passing "Jack Daniel's". So only use partial_ratio
-    #      when the candidate is at least as long as the brand.
-    # In every other case a close plain ratio is required, which scores noise low.
-    brand_is_discriminating = exp_len >= 5
-
+    candidates.append(ocr_text.strip())          # whole text (handles single-line OCR)
     for line in candidates:
         line_norm = normalize_loose(line)
         if not line_norm or not exp_norm:
             continue
         score = fuzz.ratio(exp_norm, line_norm)
-        if brand_is_discriminating and len(line_norm.replace(" ", "")) >= exp_len:
+        if discriminating and len(line_norm.replace(" ", "")) >= exp_len:
             score = max(score, fuzz.partial_ratio(exp_norm, line_norm))
         if score > best_score:
             best_score, best_line = score, line.strip()
+    return best_score, best_line
 
+
+# --- Brand --------------------------------------------------------------------
+def match_brand(expected: str, ocr_text: str) -> FieldResult:
+    """Fuzzy brand match. Tolerant of case/punctuation/whitespace formatting."""
+    best_score, best_line = _best_fuzzy_line(expected, ocr_text)
     passed = best_score >= BRAND_SIMILARITY_THRESHOLD
     return FieldResult(
         field="brand",
@@ -352,14 +356,24 @@ _NET_RE = re.compile(
 NET_TOLERANCE_ML = 0.5
 
 
+def _parse_number(raw: str) -> float:
+    """Parse a printed quantity, disambiguating the comma. A comma followed by exactly
+    three digits is a **thousands separator** (`1,000` -> 1000); a comma with one or two
+    digits is the EU **decimal** mark (`0,75` -> 0.75). Without this, `1,000 mL` (a very
+    common size) would parse to 1 mL and confidently FLAG a correct label."""
+    if "," in raw and "." not in raw:
+        head, frac = raw.split(",", 1)
+        return float(head + frac) if len(frac) == 3 else float(f"{head}.{frac}")
+    return float(raw.replace(",", ""))           # '.' decimal, or plain '1000'
+
+
 def _parse_net(text: str) -> list[tuple[float, str]]:
     """Extract (milliliters, display) net-contents candidates from text."""
     out: list[tuple[float, str]] = []
     for m in _NET_RE.finditer(text):
         factor = _NET_UNITS_ML.get(m.group(2).lower())
         if factor is not None:
-            out.append((float(m.group(1).replace(",", ".")) * factor,
-                        f"{m.group(1)} {m.group(2)}"))
+            out.append((_parse_number(m.group(1)) * factor, f"{m.group(1)} {m.group(2)}"))
     return out
 
 
@@ -405,27 +419,17 @@ def match_class_type(expected: str, ocr_text: str) -> FieldResult:
     """Fuzzy presence of the claimed class/type designation on the label. Three-way:
     PASS at threshold, FLAG when a different designation is present, defer below the
     floor (couldn't locate it — don't confidently FLAG)."""
-    exp_norm = normalize_loose(expected)
-    exp_len = len(exp_norm.replace(" ", ""))
-    best_line, best_score = "", 0.0
-    candidates = [ln.strip() for ln in ocr_text.splitlines() if ln.strip()]
-    candidates.append(ocr_text.strip())
-    for line in candidates:
-        line_norm = normalize_loose(line)
-        if not line_norm or not exp_norm:
-            continue
-        score = fuzz.ratio(exp_norm, line_norm)
-        # Guard partial_ratio like match_brand: only when the candidate is at least as
-        # long as the designation, else a short garbled line scores a false 100.
-        if len(line_norm.replace(" ", "")) >= exp_len:
-            score = max(score, fuzz.partial_ratio(exp_norm, line_norm))
-        if score > best_score:
-            best_score, best_line = score, line.strip()
+    exp_len = len(normalize_loose(expected).replace(" ", ""))
+    best_score, best_line = _best_fuzzy_line(expected, ocr_text)
     detail = f"similarity {best_score:.0f}/100 (threshold {CLASS_TYPE_SIMILARITY_THRESHOLD:.0f})"
     if best_score >= CLASS_TYPE_SIMILARITY_THRESHOLD:
         return FieldResult(field="class_type", label="Class/type", passed=True,
                            expected=expected, found=best_line, detail=detail)
-    if best_score >= CLASS_TYPE_REVIEW_FLOOR:
+    # Only a *discriminating* designation (>= 5 chars) can confidently FLAG as
+    # "present but different". A short designation (Gin/Rum/Port) below threshold
+    # scores incidental overlap with unrelated label text, so it DEFERS rather than
+    # producing a confident-wrong FLAG (the zero-confident-wrong invariant).
+    if best_score >= CLASS_TYPE_REVIEW_FLOOR and exp_len >= 5:
         return FieldResult(field="class_type", label="Class/type", passed=False,
                            expected=expected, found=best_line or "(not found on label)",
                            detail=detail + " — designation on the label differs")
