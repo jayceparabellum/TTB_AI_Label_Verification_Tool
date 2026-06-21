@@ -19,3 +19,6 @@ eval/images/*
 
 # Local agent persistence (checkpoints, audit, vector store) — never committed
 .agent_data/
+
+# Local CodeGraph index — per-developer, regenerated locally
+.codegraph/
