@@ -1,0 +1,26 @@
+filename,brand,alcohol_content
+budweiser__clean.png,Budweiser,5
+bud_light__clean.png,Bud Light,4.2
+coors_light__abv_mismatch.png,Coors Light,4.2
+miller_lite__clean.png,Miller Lite,4.2
+corona_extra__clean.png,Corona Extra,4.6
+heineken__bad_warning.png,Heineken,5
+guinness_draught__clean.png,Guinness Draught,4.2
+stella_artois__clean.png,Stella Artois,5
+modelo_especial__clean.png,Modelo Especial,4.4
+sierra_nevada_pale_ale__clean.png,Sierra Nevada Pale Ale,5.6
+samuel_adams_boston_lager__clean.png,Samuel Adams Boston Lager,5
+blue_moon_belgian_white__abv_mismatch.png,Blue Moon Belgian White,5.4
+white_claw_hard_seltzer__clean.png,White Claw Hard Seltzer,5
+truly_hard_seltzer__clean.png,Truly Hard Seltzer,5
+barefoot_cabernet_sauvignon__clean.png,Barefoot Cabernet Sauvignon,13.5
+yellow_tail_shiraz__bad_warning.png,Yellow Tail Shiraz,13.5
+sutter_home_white_zinfandel__clean.png,Sutter Home White Zinfandel,9.5
+kendall_jackson_vintner_s_reserve_chardonnay__clean.png,Kendall-Jackson Vintner's Reserve Chardonnay,13.5
+jack_daniel_s_old_no_7__clean.png,Jack Daniel's Old No. 7,40
+smirnoff_no_21_vodka__clean.png,Smirnoff No. 21 Vodka,40
+bacardi_superior_rum__abv_mismatch.png,Bacardi Superior Rum,40
+jameson_irish_whiskey__clean.png,Jameson Irish Whiskey,40
+tito_s_handmade_vodka__clean.png,Tito's Handmade Vodka,40
+patron_silver_tequila__clean.png,Patron Silver Tequila,40
+captain_morgan_original_spiced_rum__clean.png,Captain Morgan Original Spiced Rum,35
