@@ -50,12 +50,25 @@ def _run_tool(name, args, image="clean_pass", thread="t"):
 
 
 def test_roster_shape():
-    assert len(T.ALL_TOOLS) == 12
+    assert len(T.ALL_TOOLS) == 13
     assert T.WRITE_TOOL_NAMES == {"override_result", "manual_fallback", "batch_verify"}
     names = {t.name for t in T.ALL_TOOLS}
     assert {"verify_label", "verify_text", "extract_label_fields", "verify_warning",
-            "list_flagged", "regulatory_lookup", "explain_flag",
-            "validate_class_type", "export_audit_log"} <= names
+            "list_flagged", "regulatory_lookup", "explain_flag", "validate_class_type",
+            "export_audit_log", "verify_audit_log"} <= names
+
+
+def test_verify_audit_log_reports_integrity():
+    audit.record("agent-user", "override", "r1", "FLAG", "PASS", "manual review ok")
+    intact = T.verify_audit_log.invoke({})
+    assert intact["ok"] and intact["kind"] is None
+
+    # Tamper out-of-band, then the tool reports the break (read-only; no confirm gate).
+    from sqlalchemy import text
+    with audit._engine().begin() as c:
+        c.execute(text("UPDATE audit SET reason = 'tampered' WHERE id = 1"))
+    broken = T.verify_audit_log.invoke({})
+    assert not broken["ok"] and broken["kind"] == "altered"
 
 
 def test_read_tools_flow_through_without_interrupt():
