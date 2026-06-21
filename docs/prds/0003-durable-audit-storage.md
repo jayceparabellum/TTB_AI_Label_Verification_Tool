@@ -118,6 +118,24 @@ Things a reader might assume are included but are not:
   label text? Even though retention policy is a non-goal, a scoping decision is needed.
 - Exact LangGraph Postgres saver package + version, and its schema-migration story.
 
+## Post-merge verification
+
+Implemented in **PR #43** (audit log + checkpoints on SQLAlchemy Core, Postgres
+selected by `DATABASE_URL`). The live Postgres path was **config-tested only** — no
+Postgres server was available in the implementation environment — so the SQLite
+same-code-path tests stand in for it. Before relying on the durable backend in
+production:
+
+- [ ] **Run the live Postgres round-trip.** Either let Render's managed Postgres
+  (declared in `render.yaml`) wire up `DATABASE_URL` on deploy, or run the gated
+  test locally: `TEST_DATABASE_URL=<dsn> pytest tests/test_durable_audit.py::test_postgres_round_trip`.
+- [ ] **Confirm an approval survives a real redeploy** on Render — record an
+  override, trigger a redeploy, verify the audit entry + its export are still present.
+- [ ] **Verify the Postgres checkpointer** (`PostgresSaver.setup()` + interrupt/resume)
+  against a live database — this branch is lazy-imported and untested here.
+- [ ] **Revisit the PII/checkpoint scoping question** (below) once durable checkpoints
+  are observed in production, since checkpoint state can contain label text.
+
 ## References
 
 - [PRD-v2.md](../../PRD-v2.md) — "Open questions": durable, tamper-evident audit storage.
