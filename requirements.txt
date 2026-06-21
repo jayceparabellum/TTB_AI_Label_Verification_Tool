@@ -37,3 +37,7 @@ rank-bm25==0.2.2
 #   pip install sentence-transformers
 # The vector store is in-memory numpy (exact cosine at this corpus size); the model
 # downloads once and then runs fully offline.
+# Optional persistent dense store: set RAG_DENSE_STORE=chroma to keep embeddings in a
+# Chroma store (config.CHROMA_DIR) so they survive restarts instead of re-embedding on
+# boot. Also optional (kept out of the base image); telemetry is disabled (offline):
+#   pip install chromadb

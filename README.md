@@ -435,9 +435,11 @@ does not do:
   the **dense BGE-small** backend (`rag/dense.py`, fused with BM25 via RRF) is fully
   implemented and turns on automatically once `pip install sentence-transformers`
   makes the embedder importable (`RAG_DENSE=auto`). The model downloads once and then
-  runs offline; at this corpus size the vector store is an exact in-memory numpy
-  cosine (Chroma persistence is a deferred optimization, not needed yet). BM25 is
-  strong for term-heavy regulatory queries; dense adds synonym/paraphrase recall.
+  runs offline; at this corpus size the vector store defaults to an exact in-memory
+  numpy cosine, rebuilt at startup. For a persistent store that survives restarts,
+  set `RAG_DENSE_STORE=chroma` (`pip install chromadb`) — embeddings are computed once
+  and reused, telemetry disabled so it stays offline. BM25 is strong for term-heavy
+  regulatory queries; dense adds synonym/paraphrase recall.
 - **RAG corpus is a curated excerpt, not the full live eCFR.** The committed corpus
   is 27 CFR Part 16 + labeling slices of Parts 4 (wine), 5 (distilled spirits), and 7
   (malt beverages), citation-accurate and offline; §16.21 is verbatim. All section
