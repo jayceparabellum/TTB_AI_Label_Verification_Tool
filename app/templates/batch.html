@@ -31,6 +31,18 @@
     <button type="submit" class="btn-primary">Verify batch</button>
   </form>
 
+  <section class="card" style="margin-top:18px">
+    <h2 style="margin-top:0">Try it with sample data</h2>
+    <p class="hint">New here? Download this ready-to-run sample batch &mdash; 25 real
+      alcohol labels and a matching CSV &mdash; then upload both above to see how
+      verification works.</p>
+    <p class="hint">
+      <a href="/static/alcohol_labels.zip" download>⬇ Sample labels (.zip, 25 images)</a>
+      &nbsp;&middot;&nbsp;
+      <a href="/static/batch-template-filled.csv" download>⬇ Matching CSV</a>
+    </p>
+  </section>
+
   <footer class="foot">Proof of concept. Processing is local; nothing you upload is stored.</footer>
 {% endblock %}
 {% block scripts %}<script src="/static/batch.js" defer></script>{% endblock %}

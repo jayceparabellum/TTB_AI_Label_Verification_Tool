@@ -157,6 +157,35 @@ def test_batch_form_lists_inputs_and_cap():
     assert "batch-template.csv" in html
 
 
+def test_batch_page_offers_sample_data_links():
+    # The "Try it with sample data" section links both downloadable samples.
+    html = client.get("/batch").text
+    assert "/static/alcohol_labels.zip" in html
+    assert "/static/batch-template-filled.csv" in html
+
+
+def test_batch_sample_assets_are_publicly_served():
+    # Both samples are reachable by any user (no auth) as static files.
+    zip_resp = client.get("/static/alcohol_labels.zip")
+    csv_resp = client.get("/static/batch-template-filled.csv")
+    assert zip_resp.status_code == 200
+    assert csv_resp.status_code == 200
+
+
+def test_batch_sample_zip_and_csv_stay_consistent():
+    # Guard: the served sample must remain a runnable batch — every CSV filename
+    # has a matching image in the zip and vice-versa, within the label cap.
+    from app import ingest, batch as batch_mod
+
+    zip_bytes = client.get("/static/alcohol_labels.zip").content
+    csv_bytes = client.get("/static/batch-template-filled.csv").content
+    images = {name for name, _ in ingest.extract_images_from_zip(zip_bytes)}
+    rows, dups = batch_mod.parse_csv(csv_bytes)
+    assert not dups
+    assert images == set(rows)
+    assert len(images) <= batch_mod.BATCH_MAX_LABELS
+
+
 def test_batch_run_renders_table_and_summary():
     csv = b"filename,brand,alcohol_content\nclean_pass.png,Stone's Throw,5.0\nabv_mismatch.png,Stone's Throw,5.0\n"
     files = [
