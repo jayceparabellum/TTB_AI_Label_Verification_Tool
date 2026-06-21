@@ -283,7 +283,9 @@ every change.
 - **Human-in-the-loop confirm gate.** Read tools flow through; before any **write**
   (`override_result`, `manual_fallback`, `batch_verify`) the graph calls `interrupt()`
   and resumes only on an explicit human **Approve** — the agent can never auto-commit.
-  Every write is recorded to an **append-only audit log** (who/what/when/why).
+  Every write is recorded to an **append-only, hash-chained audit log** (who/what/when/
+  why). Check its integrity any time with `python scripts/verify_audit.py` (exit 0 =
+  intact, 1 = tampered; `--json` for machines) — works against SQLite or Postgres.
 - **Citation-grounded RAG, cite-or-refuse.** Hybrid retrieval — BM25 fused with
   dense **BGE-small** embeddings via reciprocal-rank fusion (`rag/dense.py`; BM25-only
   until `pip install sentence-transformers`, then auto-on via `RAG_DENSE`) — over a

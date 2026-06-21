@@ -74,8 +74,10 @@ The minimum cut that ships:
 ### Out of scope
 
 - Everything in **Non-goals** above.
-- A standalone auditor CLI/route (the chosen surface is a function + CI gate; a CLI
-  wrapper is a possible later add, not required here).
+- ~~A standalone auditor CLI/route~~ — added as a follow-up: `scripts/verify_audit.py`
+  wraps `verify()` for an on-demand integrity check (exit 0 intact / 1 tampered,
+  `--json` for machines), runnable against SQLite or Postgres. A web route/chat tool
+  remains optional.
 
 ## Proposed Design
 
