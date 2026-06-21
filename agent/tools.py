@@ -330,30 +330,26 @@ def verify_audit_log() -> dict:
             "message": v.message}
 
 
-_KNOWN_WINE_TYPES = {
-    "table wine", "red wine", "white wine", "rose wine", "rosé wine",
-    "sparkling wine", "dessert wine", "fortified wine",
-}
-
-
 @tool
-def validate_class_type(claimed_designation: str, beverage_type: str = "wine") -> dict:
-    """Assess a claimed class/type designation against the standards of identity —
-    ADVISORY ONLY (status OK or REVIEW), never an automatic rejection. Returns the
-    controlling citation; a human decides."""
+def validate_class_type(claimed_designation: str, beverage_type: str = "") -> dict:
+    """Assess a claimed class/type designation against the standards of identity for
+    wine (27 CFR part 4) and distilled spirits (part 5) — ADVISORY ONLY (status OK or
+    REVIEW), never an automatic rejection. The OK/REVIEW decision is grounded in the
+    recognized-designations dataset; a controlling citation is returned; a human decides.
+    Pass beverage_type ('wine'|'spirits') to disambiguate; otherwise it is inferred."""
     from rag import generate
+    from app import standards
 
-    norm = claimed_designation.strip().lower()
-    grounded = generate.explain_flag("class type designation",
-                                     f"{beverage_type} {claimed_designation}")
+    rec = standards.recognize(claimed_designation, beverage_type=beverage_type or None)
+    grounded = generate.explain_flag(
+        "class type designation",
+        f"{beverage_type or rec.beverage_type or ''} {claimed_designation}".strip())
     citations = grounded.get("citations", [])
-    if norm in _KNOWN_WINE_TYPES:
+    if rec.recognized:
         return {"status": "OK", "advisory": True, "citations": citations,
-                "assessment": f"'{claimed_designation}' is a recognized class/type."}
+                "assessment": rec.message}
     return {"status": "REVIEW", "advisory": True, "citations": citations,
-            "assessment": (f"'{claimed_designation}' is not a simple recognized "
-                           "class/type — recommend human review against the standards "
-                           "of identity. This is advisory; it is never an auto-rejection.")}
+            "assessment": rec.message + " This is advisory; it is never an auto-rejection."}
 
 
 READ_TOOLS = [verify_label, verify_text, extract_label_fields, verify_warning,

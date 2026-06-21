@@ -58,6 +58,15 @@ def test_roster_shape():
             "export_audit_log", "verify_audit_log"} <= names
 
 
+def test_validate_class_type_grounds_in_dataset():
+    ok = T.validate_class_type.invoke({"claimed_designation": "Bourbon"})
+    assert ok["status"] == "OK" and ok["advisory"] is True       # spirits, inferred
+    wine = T.validate_class_type.invoke({"claimed_designation": "Cabernet Sauvignon"})
+    assert wine["status"] == "OK"
+    rev = T.validate_class_type.invoke({"claimed_designation": "Unicorn Tears"})
+    assert rev["status"] == "REVIEW"                              # not a recognized class/type
+
+
 def test_verify_audit_log_reports_integrity():
     audit.record("agent-user", "override", "r1", "FLAG", "PASS", "manual review ok")
     intact = T.verify_audit_log.invoke({})

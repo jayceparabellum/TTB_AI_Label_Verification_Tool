@@ -8,6 +8,7 @@ import time
 from . import ocr
 
 _log = logging.getLogger(__name__)
+from . import standards
 from .matching import (
     match_alcohol_content,
     match_brand,
@@ -61,8 +62,32 @@ def verify_fields(
     if net_contents and net_contents.strip():
         fields.append(match_net_contents(net_contents, text))
     if class_type and class_type.strip():
-        fields.append(match_class_type(class_type, text))
+        fields.append(_adjudicate_class_type(class_type, text))
     return fields
+
+
+def _adjudicate_class_type(class_type: str, text: str) -> FieldResult:
+    """Class/type verdict = standards-of-identity recognition × label presence.
+
+    Recognized designation -> keep the presence verdict (PASS when on the label),
+    enriched with the controlling citation. Unrecognized -> defer to NEEDS REVIEW with
+    the recommendation, **never** a confident PASS (don't pass an invalid designation)
+    and **never** a confident FLAG (recognition is not an auto-rejection). (PRD 0004-style
+    zero-confident-wrong posture; standards-of-identity plan KTD2.)
+    """
+    presence = match_class_type(class_type, text)
+    rec = standards.recognize(class_type)
+    if rec.recognized:
+        cite = rec.citation or {}
+        section = cite.get("section")
+        if section:
+            presence.detail = f"{presence.detail} — recognized: 27 CFR §{section}"
+        return presence
+    # Not a recognized class/type: defer regardless of presence, with the recommendation.
+    return FieldResult(
+        field="class_type", label="Class/type", passed=False,
+        expected=class_type, found=presence.found,
+        detail=rec.message, inconclusive=True)
 
 
 def _elapsed_ms(start: float) -> int:
