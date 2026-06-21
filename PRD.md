@@ -154,11 +154,11 @@ Explicitly **not** success for this system:
 
 - Everything in **Non-goals** above.
 - Full structured OCR of all seven label fields. Brand + ABV + warning are always
-  adjudicated; **net contents + class/type are adjudicated on the single-label path
-  when claimed** (optional inputs — net contents as a metric numeric match, class/type
-  as fuzzy label-presence, NOT standards-of-identity; safe PASS/FLAG/defer). Producer
-  and country remain best-effort raw text, "not adjudicated." Batch CSV and the chat
-  tools still adjudicate the original three (extending them is a follow-up).
+  adjudicated; **net contents + class/type are adjudicated when claimed** across all
+  surfaces — single-label image/text, batch CSV (optional `net_contents`/`class_type`
+  columns), and the chat verify tools (optional inputs — net contents as a metric
+  numeric match, class/type as fuzzy label-presence, NOT standards-of-identity; safe
+  PASS/FLAG/defer). Producer and country remain best-effort raw text, "not adjudicated."
 - The TTB Beverage Alcohol Manual (BAM) and Parts other than 4/5/7/16 in the corpus.
 - A versioning/diff UI for the corpus or audit log.
 
@@ -285,10 +285,10 @@ string for the warning check, defaulted so an agent never types it:
   cryptographic append-only integrity remains a future step).
 - Whether/when COLA or any TTB-system integration becomes in-scope (today a hard
   non-goal).
-- Net contents + class/type are now adjudicated on the single-label path (presence /
-  numeric match). Remaining: **standards-of-identity correctness** for class/type
-  (27 CFR Parts 4/5), and extending the new fields to the **batch CSV** and **chat
-  tools** for parity.
+- Net contents + class/type are now adjudicated across all surfaces (single-label,
+  batch CSV, chat tools) as presence / numeric matches. Remaining: **standards-of-
+  identity correctness** for class/type (27 CFR Parts 4/5) — verifying the designation
+  is *valid*, not just present.
 
 ## References
 

@@ -108,3 +108,21 @@ def test_verify_text_omits_optional_when_blank():
     assert r.status_code == 200
     # No result card for an unclaimed field (the re-check form input may still exist).
     assert _NET_CARD not in r.text and _CLASS_CARD not in r.text
+
+
+# --- chat-tool parity --------------------------------------------------------
+
+def test_chat_verify_text_tool_adjudicates_optional_fields():
+    from agent.tools import run_verify_text
+    out = run_verify_text(LABEL, "Stone's Throw", "5.0",
+                          net_contents="750 mL", class_type="Cabernet Sauvignon")
+    names = [f["field"] for f in out["fields"]]
+    assert "net_contents" in names and "class_type" in names
+    assert out["overall_pass"]                      # both match in LABEL
+
+
+def test_chat_verify_text_tool_skips_optional_when_blank():
+    from agent.tools import run_verify_text
+    out = run_verify_text(LABEL, "Stone's Throw", "5.0")
+    assert [f["field"] for f in out["fields"]] == \
+        ["brand", "alcohol_content", "government_warning"]
