@@ -124,7 +124,9 @@ Implemented in **PR #43** (audit log + checkpoints on SQLAlchemy Core, Postgres
 selected by `DATABASE_URL`). The live Postgres path was **config-tested only** — no
 Postgres server was available in the implementation environment — so the SQLite
 same-code-path tests stand in for it. Before relying on the durable backend in
-production:
+production, follow the step-by-step
+[durable-audit Postgres verification runbook](../runbooks/durable-audit-postgres-verification.md),
+which covers each box below:
 
 - [ ] **Run the live Postgres round-trip.** Either let Render's managed Postgres
   (declared in `render.yaml`) wire up `DATABASE_URL` on deploy, or run the gated
