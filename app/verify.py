@@ -11,7 +11,9 @@ _log = logging.getLogger(__name__)
 from .matching import (
     match_alcohol_content,
     match_brand,
+    match_class_type,
     match_government_warning,
+    match_net_contents,
 )
 from .matching import FieldResult
 from .models import VerificationResult
@@ -38,17 +40,29 @@ def verify_fields(
     brand: str,
     alcohol_content: str,
     expected_warning: str = OFFICIAL_GOVERNMENT_WARNING,
+    net_contents: str = "",
+    class_type: str = "",
 ) -> list[FieldResult]:
-    """Run the three field matchers against already-extracted OCR text.
+    """Run the field matchers against already-extracted OCR text.
+
+    Brand, alcohol content, and the government warning are always adjudicated.
+    Net contents and class/type are adjudicated ONLY when a claimed value is
+    supplied — an omitted field is never FLAGged, so the optional fields can't
+    regress a label that didn't claim them.
 
     Shared by the first-pass verify (after OCR) and re-check (which reuses the
     same text), so both decide identically — re-check never re-OCRs.
     """
-    return [
+    fields = [
         match_brand(brand, text),
         match_alcohol_content(alcohol_content, text),
         match_government_warning(text, expected_warning),
     ]
+    if net_contents and net_contents.strip():
+        fields.append(match_net_contents(net_contents, text))
+    if class_type and class_type.strip():
+        fields.append(match_class_type(class_type, text))
+    return fields
 
 
 def _elapsed_ms(start: float) -> int:
@@ -72,16 +86,19 @@ def reverify_text(
     alcohol_content: str,
     expected_warning: str = OFFICIAL_GOVERNMENT_WARNING,
     confidence: float = 100.0,
+    net_contents: str = "",
+    class_type: str = "",
 ) -> VerificationResult:
     """Re-check edited claimed data against the SAME OCR text (no re-OCR).
 
     The label image and its text are unchanged on a re-check — only the claimed
-    brand/ABV change — so running the matchers on the carried text keeps verdicts
+    data changes — so running the matchers on the carried text keeps verdicts
     consistent with the original read and is instant. The OCR read quality is
     unchanged too, so the carried confidence / needs-review state is preserved.
     """
     start = time.perf_counter()
-    fields = verify_fields(text, brand, alcohol_content, expected_warning)
+    fields = verify_fields(text, brand, alcohol_content, expected_warning,
+                           net_contents=net_contents, class_type=class_type)
     return VerificationResult(
         readable=True,
         fields=fields,
@@ -97,6 +114,8 @@ def verify_label(
     brand: str,
     alcohol_content: str,
     expected_warning: str = OFFICIAL_GOVERNMENT_WARNING,
+    net_contents: str = "",
+    class_type: str = "",
 ) -> VerificationResult:
     """Verify a single label image against the claimed application data."""
     start = time.perf_counter()
@@ -112,7 +131,8 @@ def verify_label(
     if not ocr.is_readable(text):
         return _unreadable_result(start, text)
 
-    fields = verify_fields(text, brand, alcohol_content, expected_warning)
+    fields = verify_fields(text, brand, alcohol_content, expected_warning,
+                           net_contents=net_contents, class_type=class_type)
 
     return VerificationResult(
         readable=True,

@@ -230,6 +230,8 @@ def verify_text(
     brand: str = Form(...),
     alcohol_content: str = Form(...),
     expected_warning: str = Form(OFFICIAL_GOVERNMENT_WARNING),
+    net_contents: str = Form(""),
+    class_type: str = Form(""),
 ):
     """Verify typed/pasted label text against the claimed data (no image, no OCR)."""
     text = label_text.strip()
@@ -240,13 +242,16 @@ def verify_text(
             message="Please paste the label text (brand, alcohol content, and the "
                     "government warning) so we have something to check.",
         )
-        return _render_result(request, result, brand, alcohol_content)
+        return _render_result(request, result, brand, alcohol_content,
+                              net_contents=net_contents, class_type=class_type)
     # The typed text IS the label text; run the matchers directly (high confidence).
     result = reverify_text(text, brand=brand, alcohol_content=alcohol_content,
-                           expected_warning=warning)
+                           expected_warning=warning, net_contents=net_contents,
+                           class_type=class_type)
     return _render_result(
         request, result, brand, alcohol_content,
         ocr_text=text, expected_warning=warning,
+        net_contents=net_contents, class_type=class_type,
     )
 
 
@@ -259,6 +264,8 @@ def _render_result(
     image_src: str | None = None,
     ocr_text: str = "",
     expected_warning: str = OFFICIAL_GOVERNMENT_WARNING,
+    net_contents: str = "",
+    class_type: str = "",
     error: str | None = None,
     status_code: int = 200,
 ):
@@ -269,6 +276,8 @@ def _render_result(
             "result": result,
             "brand": brand,
             "alcohol_content": alcohol_content,
+            "net_contents": net_contents,    # optional adjudicated fields — carried
+            "class_type": class_type,        # back for repopulation + re-check
             "image_src": image_src,          # data URI (upload) or static URL (sample)
             "ocr_text": ocr_text,            # carried for re-check (U4)
             "expected_warning": expected_warning,
@@ -285,33 +294,38 @@ async def verify(
     brand: str = Form(...),
     alcohol_content: str = Form(...),
     expected_warning: str = Form(OFFICIAL_GOVERNMENT_WARNING),
+    net_contents: str = Form(""),
+    class_type: str = Form(""),
 ):
+    # Carried back to repopulate the form on every render (success or error).
+    optional = {"net_contents": net_contents, "class_type": class_type}
     # Read at most one byte past the cap so an oversized upload can't exhaust memory.
     image_bytes = await label_image.read(_MAX_FILE_BYTES + 1)
     if len(image_bytes) > _MAX_FILE_BYTES:
         return _render_result(
-            request, None, brand, alcohol_content,
+            request, None, brand, alcohol_content, **optional,
             error="That image is larger than the 10 MB limit. Please upload a smaller file.",
             status_code=413)
     if not image_bytes:
         return _render_result(
-            request, None, brand, alcohol_content,
+            request, None, brand, alcohol_content, **optional,
             error="No image was uploaded — please choose a label image and try again.",
             status_code=400)
     warning = expected_warning or OFFICIAL_GOVERNMENT_WARNING
     try:
         result = verify_label(
-            image_bytes, brand=brand, alcohol_content=alcohol_content, expected_warning=warning
+            image_bytes, brand=brand, alcohol_content=alcohol_content,
+            expected_warning=warning, net_contents=net_contents, class_type=class_type,
         )
     except Exception:  # noqa: BLE001 — surface a clear error page, not an unhandled 500
         _log.exception("verify_label failed for a /verify upload (%d bytes)", len(image_bytes))
         return _render_result(
-            request, None, brand, alcohol_content,
+            request, None, brand, alcohol_content, **optional,
             error="Something went wrong verifying this label. Please try again; if it "
                   "persists, check the server logs.",
             status_code=500)
     return _render_result(
-        request, result, brand, alcohol_content,
+        request, result, brand, alcohol_content, **optional,
         image_src=ocr.to_thumbnail_data_uri(image_bytes),
         ocr_text=result.ocr_text,
         expected_warning=warning,
@@ -361,19 +375,23 @@ def reverify(
     image_src: str = Form(""),
     expected_warning: str = Form(OFFICIAL_GOVERNMENT_WARNING),
     confidence: float = Form(100.0),
+    net_contents: str = Form(""),
+    class_type: str = Form(""),
 ):
-    """Re-check edited brand/ABV against the carried OCR text — no re-OCR (U4)."""
+    """Re-check edited claimed data against the carried OCR text — no re-OCR (U4)."""
     warning = expected_warning or OFFICIAL_GOVERNMENT_WARNING
+    optional = {"net_contents": net_contents, "class_type": class_type}
     if not ocr.is_readable(ocr_text):
         result = VerificationResult(readable=False, message=UNREADABLE_MESSAGE)
         return _render_result(
-            request, result, brand, alcohol_content, image_src=image_src or None
+            request, result, brand, alcohol_content, image_src=image_src or None, **optional
         )
     result = reverify_text(ocr_text, brand=brand, alcohol_content=alcohol_content,
-                           expected_warning=warning, confidence=confidence)
+                           expected_warning=warning, confidence=confidence,
+                           net_contents=net_contents, class_type=class_type)
     return _render_result(
         request, result, brand, alcohol_content,
-        image_src=image_src or None, ocr_text=ocr_text, expected_warning=warning,
+        image_src=image_src or None, ocr_text=ocr_text, expected_warning=warning, **optional,
     )
 
 

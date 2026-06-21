@@ -78,6 +78,16 @@
         <span class="field-label">Alcohol content (ABV %)</span>
         <input type="text" name="alcohol_content" value="{{ alcohol_content }}" required>
       </label>
+      <label class="field">
+        <span class="field-label">Net contents <span class="hint">(optional)</span></span>
+        <input type="text" name="net_contents" value="{{ net_contents|default('') }}"
+               placeholder="e.g. 750 mL">
+      </label>
+      <label class="field">
+        <span class="field-label">Class/type <span class="hint">(optional)</span></span>
+        <input type="text" name="class_type" value="{{ class_type|default('') }}"
+               placeholder="e.g. Cabernet Sauvignon">
+      </label>
       <input type="hidden" name="ocr_text" value="{{ ocr_text }}">
       <input type="hidden" name="image_src" value="{{ image_src or '' }}">
       <input type="hidden" name="expected_warning" value="{{ expected_warning }}">

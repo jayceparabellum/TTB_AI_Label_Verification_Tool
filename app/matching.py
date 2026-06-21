@@ -331,3 +331,104 @@ def match_government_warning(ocr_text: str, expected: str = OFFICIAL_GOVERNMENT_
     return _review(
         "The government warning header couldn't be read clearly — please verify by eye.",
         "header region didn't OCR confidently — needs a human to verify")
+
+
+# --- Net contents -------------------------------------------------------------
+# Metric volume units -> milliliters. TTB net-contents statements for wine/spirits
+# are metric (mL/L); fl oz is intentionally unsupported — mixing measurement systems
+# invites wrong conversions, and the metric statement is the controlling one.
+_NET_UNITS_ML = {
+    "ml": 1.0, "milliliter": 1.0, "milliliters": 1.0, "millilitre": 1.0, "millilitres": 1.0,
+    "cl": 10.0, "centiliter": 10.0, "centiliters": 10.0,
+    "dl": 100.0, "deciliter": 100.0, "deciliters": 100.0,
+    "l": 1000.0, "liter": 1000.0, "liters": 1000.0, "litre": 1000.0, "litres": 1000.0,
+}
+_NET_RE = re.compile(
+    r"(\d+(?:[.,]\d+)?)\s*"
+    r"(ml|cl|dl|l|milliliters?|millilitres?|centiliters?|deciliters?|liters?|litres?)\b",
+    re.I)
+# Net contents must match the claimed value after unit normalization. A tiny absolute
+# epsilon absorbs float rounding only (0.75 L == 750 mL), not real differences.
+NET_TOLERANCE_ML = 0.5
+
+
+def _parse_net(text: str) -> list[tuple[float, str]]:
+    """Extract (milliliters, display) net-contents candidates from text."""
+    out: list[tuple[float, str]] = []
+    for m in _NET_RE.finditer(text):
+        factor = _NET_UNITS_ML.get(m.group(2).lower())
+        if factor is not None:
+            out.append((float(m.group(1).replace(",", ".")) * factor,
+                        f"{m.group(1)} {m.group(2)}"))
+    return out
+
+
+def match_net_contents(expected: str, ocr_text: str) -> FieldResult:
+    """Numeric net-contents match (metric volume). PASS on a value match, FLAG on a
+    genuinely different value, and DEFER (inconclusive -> NEEDS REVIEW) when none is
+    found — net contents is fine print and OCR-miss-prone, so an absence is reviewed,
+    never confidently FLAGged."""
+    claimed = _parse_net(expected)
+    if not claimed:
+        return FieldResult(
+            field="net_contents", label="Net contents", passed=False,
+            expected=expected or "(none)",
+            found="(claimed net contents not understood)",
+            detail=f"could not parse a metric volume from the claimed value '{expected}'")
+    claimed_ml, expected_disp = claimed[0]
+    candidates = _parse_net(ocr_text)
+    matched = next((d for ml, d in candidates if abs(ml - claimed_ml) <= NET_TOLERANCE_ML), None)
+    if matched is not None:
+        return FieldResult(field="net_contents", label="Net contents", passed=True,
+                           expected=expected_disp, found=matched,
+                           detail="matches the claimed net contents")
+    if candidates:
+        return FieldResult(field="net_contents", label="Net contents", passed=False,
+                           expected=expected_disp,
+                           found=", ".join(d for _, d in candidates),
+                           detail="label net contents differs from the application")
+    return FieldResult(field="net_contents", label="Net contents", passed=False,
+                       expected=expected_disp, found="(no net contents found on label)",
+                       detail="no net-contents statement detected; deferring to review",
+                       inconclusive=True)
+
+
+# --- Class / type -------------------------------------------------------------
+# Adjudicates only that the CLAIMED class/type designation APPEARS on the label
+# (fuzzy presence, like brand) — NOT standards-of-identity correctness, which needs
+# the 27 CFR Parts 4/5 designation rules and is out of scope.
+CLASS_TYPE_SIMILARITY_THRESHOLD = 90.0   # PASS at/above (designations are wordier than brands)
+CLASS_TYPE_REVIEW_FLOOR = 60.0           # below this it isn't really present -> defer, not FLAG
+
+
+def match_class_type(expected: str, ocr_text: str) -> FieldResult:
+    """Fuzzy presence of the claimed class/type designation on the label. Three-way:
+    PASS at threshold, FLAG when a different designation is present, defer below the
+    floor (couldn't locate it — don't confidently FLAG)."""
+    exp_norm = normalize_loose(expected)
+    exp_len = len(exp_norm.replace(" ", ""))
+    best_line, best_score = "", 0.0
+    candidates = [ln.strip() for ln in ocr_text.splitlines() if ln.strip()]
+    candidates.append(ocr_text.strip())
+    for line in candidates:
+        line_norm = normalize_loose(line)
+        if not line_norm or not exp_norm:
+            continue
+        score = fuzz.ratio(exp_norm, line_norm)
+        # Guard partial_ratio like match_brand: only when the candidate is at least as
+        # long as the designation, else a short garbled line scores a false 100.
+        if len(line_norm.replace(" ", "")) >= exp_len:
+            score = max(score, fuzz.partial_ratio(exp_norm, line_norm))
+        if score > best_score:
+            best_score, best_line = score, line.strip()
+    detail = f"similarity {best_score:.0f}/100 (threshold {CLASS_TYPE_SIMILARITY_THRESHOLD:.0f})"
+    if best_score >= CLASS_TYPE_SIMILARITY_THRESHOLD:
+        return FieldResult(field="class_type", label="Class/type", passed=True,
+                           expected=expected, found=best_line, detail=detail)
+    if best_score >= CLASS_TYPE_REVIEW_FLOOR:
+        return FieldResult(field="class_type", label="Class/type", passed=False,
+                           expected=expected, found=best_line or "(not found on label)",
+                           detail=detail + " — designation on the label differs")
+    return FieldResult(field="class_type", label="Class/type", passed=False,
+                       expected=expected, found="(not found on label)",
+                       detail=detail + "; deferring to review", inconclusive=True)

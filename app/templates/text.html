@@ -26,6 +26,22 @@
     </label>
 
     <details class="advanced">
+      <summary>Optional: net contents &amp; class/type</summary>
+      <p class="hint">Leave blank to skip — each is checked only when you provide a
+        claimed value, so an omitted field is never flagged.</p>
+      <label class="field">
+        <span class="field-label">Net contents</span>
+        <input type="text" name="net_contents" placeholder="e.g. 750 mL"
+               value="{{ net_contents|default('') }}">
+      </label>
+      <label class="field">
+        <span class="field-label">Class/type designation</span>
+        <input type="text" name="class_type" placeholder="e.g. Cabernet Sauvignon"
+               value="{{ class_type|default('') }}">
+      </label>
+    </details>
+
+    <details class="advanced">
       <summary>Government warning (already set to the official text)</summary>
       <p class="hint">The expected warning is pre-filled with the official
         27 CFR &sect;16.21 text. You normally do not need to change this.</p>
