@@ -115,7 +115,7 @@ bash scripts/setup_ollama.sh                 # pulls llama3.2:3b; chat works onc
 pip install sentence-transformers            # then RAG_DENSE=auto enables it
 
 # run the tests + the evaluations
-pytest                                        # 155 tests
+pytest                                        # 342 passing
 python eval/run_eval.py                       # verifier decision board -> eval/REPORT.md
 python eval/run_rag_eval.py                   # RAG hit-rate / faithfulness / citation
 python eval/run_agent_eval.py gate            # agent-behavior gate (replay) -> eval/AGENT_REPORT.md
@@ -126,7 +126,7 @@ python eval/run_agent_eval.py gate            # agent-behavior gate (replay) -> 
 ## Tests and evaluation
 
 ```bash
-pytest                    # 155 unit + end-to-end tests
+pytest                    # 342 passing unit + end-to-end tests
 python eval/run_eval.py   # goal metrics + latency report -> eval/REPORT.md
 ```
 
