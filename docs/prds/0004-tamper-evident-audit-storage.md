@@ -1,6 +1,6 @@
 # PRD 0004: Tamper-Evident Audit Storage
 
-- **Status:** Draft
+- **Status:** Implemented (2026-06-21)
 - **Author:** jayceparabellum
 - **Created:** 2026-06-21
 
@@ -119,9 +119,19 @@ The minimum cut that ships:
 
 - Add **`prev_hash`** and **`row_hash`** (Text) columns to the `audit` table.
 - The genesis row's `prev_hash` is a fixed seed constant.
+- A one-row **`audit_chain_meta`** checkpoint table (`row_count`, `head_hash`),
+  updated transactionally with each append. *Added at implementation:* end-truncation
+  can't be detected from the chain alone (a truncated chain is still internally
+  valid), so a persisted head is required to catch it. Kept in the same DB — still no
+  external notarization (a non-goal); an attacker who edits both tables isn't stopped
+  (keyless tamper-*evidence*, not prevention).
 - **No migration of existing rows** (a non-goal): for an already-populated table,
   `ALTER TABLE ADD COLUMN` and begin the chain at the first new row; pre-existing rows
   are treated as pre-genesis / unchained.
+
+_Implemented 2026-06-21: chain + `verify()` inline in `agent/audit.py`, hash columns
+in the export, and a tamper-detection suite (`tests/test_audit_tamper.py`) covering all
+four kinds — wired into the existing pytest/CI job._
 
 ### External dependencies
 

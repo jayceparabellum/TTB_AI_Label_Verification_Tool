@@ -13,11 +13,12 @@ import io
 
 from openpyxl import Workbook
 
-# The export column order: the row id, then who/what/when/why exactly as recorded.
-# Kept here (not imported from audit) so the export's shape is explicit and stable
-# even if the audit schema gains columns later.
+# The export column order: the row id, then who/what/when/why exactly as recorded,
+# then the chain hashes so an exported trail is independently verifiable offline
+# (PRD 0004 — recompute SHA-256(prev_hash ‖ canonical(fields)) per row and follow the
+# links). Kept here (not imported from audit) so the export's shape is explicit.
 COLUMNS = ["id", "ts", "actor", "action", "target_result_id",
-           "old_verdict", "new_verdict", "reason"]
+           "old_verdict", "new_verdict", "reason", "prev_hash", "row_hash"]
 
 # Leading characters a spreadsheet treats as the start of a formula. The free-text
 # `reason` field is user-controlled, so a value like "=cmd|'/c calc'!A1" could execute
