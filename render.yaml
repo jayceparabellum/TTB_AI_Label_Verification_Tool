@@ -1,3 +1,13 @@
+# A managed Postgres makes the append-only audit log and the chat checkpoints
+# durable: without it they live on the web service's ephemeral disk and reset on
+# every redeploy (PRD 0003). DATABASE_URL below is wired from this database, so the
+# app picks Postgres up automatically; unset it (or remove this block) to fall back
+# to local SQLite. NOTE: the free plan expires after 90 days — upgrade for anything
+# beyond the POC demo.
+databases:
+  - name: ttb-audit-db
+    plan: free
+
 services:
   - type: web
     name: ttb-label-verification
@@ -6,3 +16,8 @@ services:
     plan: starter            # free's 0.1 CPU is too throttled for OCR (see README)
     healthCheckPath: /health
     autoDeploy: true         # deploys on push to main
+    envVars:
+      - key: DATABASE_URL    # durable audit log + checkpoints (PRD 0003)
+        fromDatabase:
+          name: ttb-audit-db
+          property: connectionString

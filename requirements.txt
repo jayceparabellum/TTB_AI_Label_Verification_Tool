@@ -17,6 +17,15 @@ langgraph==1.2.5
 langgraph-checkpoint-sqlite==3.1.0
 langchain-core==1.4.7
 langchain-ollama==1.1.0
+# --- Durable storage (PRD 0003) ---
+# The audit log + chat checkpoints default to local SQLite (offline). On a durable
+# host, set DATABASE_URL to a Postgres DSN and both persist there instead, surviving
+# redeploys. SQLAlchemy Core drives the audit log (one dialect-agnostic path, SQLite
+# or Postgres); psycopg is its Postgres driver; the postgres checkpoint saver backs
+# the chat graph. Unused on the SQLite default path.
+sqlalchemy==2.0.51
+psycopg[binary]==3.3.4
+langgraph-checkpoint-postgres==3.1.0
 # Cloud chat backend for deployed hosts with no local model (LLM_BACKEND=anthropic);
 # local/air-gapped runs default to Ollama and don't need this at runtime.
 langchain-anthropic==1.4.6

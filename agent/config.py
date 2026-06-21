@@ -41,9 +41,39 @@ OLLAMA_TEMPERATURE = LLM_TEMPERATURE
 # by default; override with ANTHROPIC_MODEL.
 ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
 
-# --- Persistence (local SQLite) ----------------------------------------------
+# --- Persistence -------------------------------------------------------------
+# Default is local SQLite, fully offline (the original invariant). On a durable
+# host, set DATABASE_URL to a Postgres DSN and BOTH the append-only audit log and
+# the agent's conversation checkpoints persist there instead — surviving the
+# redeploys that wipe Render's ephemeral disk. Unset (the default) keeps SQLite,
+# so local and air-gapped runs stay offline with no Postgres dependency.
 CHECKPOINT_DB = _path("AGENT_CHECKPOINT_DB", _DATA / "checkpoints.sqlite")
 AUDIT_DB = _path("AGENT_AUDIT_DB", _DATA / "audit.sqlite")          # used in U5
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+
+
+def is_postgres_url(url: str) -> bool:
+    """True for a Postgres DSN (the durable backend); False for SQLite/empty."""
+    return url.startswith(("postgres://", "postgresql://", "postgresql+"))
+
+
+def audit_db_url() -> str:
+    """SQLAlchemy URL for the audit log, resolved at call time.
+
+    DATABASE_URL when set (durable Postgres); otherwise a SQLite file at AUDIT_DB.
+    Read live (not cached) so tests can repoint AUDIT_DB. Render hands out
+    `postgres://` DSNs, which SQLAlchemy 2.x rejects — normalize to the psycopg
+    driver form so the same DSN works unchanged.
+    """
+    if DATABASE_URL:
+        url = DATABASE_URL
+        if url.startswith("postgres://"):
+            url = "postgresql+psycopg://" + url[len("postgres://"):]
+        elif url.startswith("postgresql://"):
+            url = "postgresql+psycopg://" + url[len("postgresql://"):]
+        return url
+    ensure_data_dir()
+    return f"sqlite:///{AUDIT_DB}"
 
 # --- RAG (Layer 3, wired in Phase C) -----------------------------------------
 CHROMA_DIR = _path("RAG_CHROMA_DIR", _DATA / "chroma")
