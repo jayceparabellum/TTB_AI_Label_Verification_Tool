@@ -74,6 +74,75 @@ def _make_inscope_labels() -> list[EvalCase]:
     return out
 
 IMAGES = Path(__file__).resolve().parent / "images"
+SYNTHETIC_CLEAN_DIR = IMAGES / "synthetic_clean"
+
+# Diverse, COMPLIANT label renders (brand + ABV + full ALL-CAPS §16.21 warning all
+# correct) used to calibrate the warning thresholds and confirm the system does not
+# confidently FLAG a clean label. These are SYNTHETIC — varied brand/ABV, warning
+# print size, background tint, and mild degradation — NOT real submitted-label photos.
+# They give the false-positive metric signal across variety the three fixed in-scope
+# labels can't, but they are deliberately kept distinct from `real_clean/`, which stays
+# the honest measurement gap for real-world artwork. Each spec's TRUE verdict is all-PASS.
+#   key, brand, abv_text, claimed_abv, style
+SYNTHETIC_CLEAN_SPECS = [
+    ("amber_field",  "Amber Field",       "ALC 5.5% BY VOL", "5.5", {}),
+    ("blue_ridge",   "Blue Ridge Cellars","ALC 13.5% BY VOL", "13.5", {"warning_size": 20, "wrap": 64}),
+    ("copper_creek", "Copper Creek",       "40% ALC/VOL (80 PROOF)", "40",
+     {"subtitle": "Kentucky Straight Bourbon", "bg": (245, 245, 238)}),
+    ("dunes_edge",   "Dunes Edge",         "ALC 6.2% BY VOL", "6.2", {"warning_size": 18, "wrap": 56}),
+    ("granite_peak", "Granite Peak",       "ALC 8.0% BY VOL", "8.0", {"degrade": "shadow"}),
+    ("hollow_pines", "Hollow Pines",       "ALC 4.8% BY VOL", "4.8", {"degrade": "rotate"}),
+    ("juniper_lane", "Juniper Lane",       "ALC 11.0% BY VOL", "11.0",
+     {"degrade": "blur", "bg": (250, 248, 240)}),
+    ("silver_birch", "Silver Birch",       "ALC 7.0% BY VOL", "7.0", {"warning_size": 19, "wrap": 60}),
+]
+
+
+def _clean_variant_image(brand: str, abv_text: str, style: dict) -> Image.Image:
+    """Render a compliant label with diversity knobs (size/tint/subtitle/degradation).
+
+    All variants carry the full official ALL-CAPS §16.21 warning, so the TRUE verdict
+    is all-PASS; the knobs vary how hard it is to READ, which is what calibrates the
+    warning thresholds.
+    """
+    bg = style.get("bg", "white")
+    subtitle = style.get("subtitle", "Craft Lager")
+    warning_size = style.get("warning_size", 22)
+    wrap = style.get("wrap", 78)
+    W, H = 1000, 700
+    img = Image.new("RGB", (W, H), bg)
+    d = ImageDraw.Draw(img)
+    d.rectangle([8, 8, W - 8, H - 8], outline="black", width=3)
+    d.text((W // 2, 110), brand, font=_font(56, bold=True), fill="black", anchor="mm")
+    d.text((W // 2, 200), subtitle, font=_font(32), fill="black", anchor="mm")
+    d.text((W // 2, 290), abv_text, font=_font(38, bold=True), fill="black", anchor="mm")
+    d.text((W // 2, 350), "12 FL OZ", font=_font(26), fill="black", anchor="mm")
+    y = 420
+    for line in textwrap.wrap(OFFICIAL_GOVERNMENT_WARNING, width=wrap):
+        d.text((40, y), line, font=_font(warning_size), fill="black")
+        y += warning_size + 8
+    degrade = style.get("degrade")
+    if degrade == "shadow":
+        img = _shadow(img)
+    elif degrade == "rotate":
+        img = img.rotate(3, expand=True, fillcolor="white")
+    elif degrade == "blur":
+        img = img.filter(ImageFilter.GaussianBlur(0.8))
+    return img
+
+
+def _make_synthetic_clean() -> list[EvalCase]:
+    """Generate the synthetic-clean calibration cohort (compliant -> all PASS). Images
+    live under eval/images/synthetic_clean/ (gitignored, regenerated each run, like the
+    degraded set). Distinct from `real_clean/` so the real-artwork gap stays honest."""
+    SYNTHETIC_CLEAN_DIR.mkdir(parents=True, exist_ok=True)
+    out = []
+    for key, brand, abv_text, abv, style in SYNTHETIC_CLEAN_SPECS:
+        path = SYNTHETIC_CLEAN_DIR / f"{key}.png"
+        _clean_variant_image(brand, abv_text, style).save(path)
+        out.append(EvalCase(f"sc_{key}", str(path.relative_to(ROOT)), brand, abv,
+                            "synthetic_clean", True, True, True))
+    return out
 
 
 def _ensure_samples() -> None:
@@ -321,8 +390,9 @@ def main() -> None:
     # submitted label images, plus readable product label images. Arbitrary bottle
     # photos are out-of-scope (reported separately, not scored).
     synthetic = CLEAN_CASES + _make_degraded()
+    synthetic_clean = _make_synthetic_clean()
     real_clean = _real_clean_cases()
-    scored = synthetic + _make_inscope_labels() + real_clean
+    scored = synthetic + _make_inscope_labels() + synthetic_clean + real_clean
     stress = _stress_cases()
 
     from app import ocr  # toggle preprocessing for the before/after (U4)
@@ -330,6 +400,7 @@ def main() -> None:
     ocr.PREPROCESS_ENABLED = False
     off = _score(synthetic)
     ocr.PREPROCESS_ENABLED = True
+    on_synth = _score(synthetic)        # same cohort as `off` -> honest before/after
     on = _score(scored)
     stress_on = _score(stress) if stress else None
 
@@ -385,16 +456,22 @@ def main() -> None:
         f"safely defers and is not counted as a false positive.",
         f"- **False-negative count (non-compliant labels confidently PASSed):** "
         f"{on['false_neg']} — the worst, regulatory-miss error; must stay 0.",
+        f"- **Synthetic clean labels (calibration):** {len(synthetic_clean)} — diverse "
+        "COMPLIANT renders (varied brand/ABV, warning print size, background tint, mild "
+        "degradation) included in the false-positive denominator above to calibrate the "
+        "warning thresholds and confirm the system does not confidently FLAG a clean label. "
+        "These are synthetic, **not** real artwork — the real-world false-positive defect "
+        "still requires real images (see the line below).",
         f"- **Real clean labels in the corpus:** {len(real_clean)}"
-        + ("" if real_clean else " — ⚠️ none yet. The synthetic set can't exhibit the "
-           "real-world false-positive defect; drop genuinely-compliant label images into "
-           "`eval/images/real_clean/` to measure and calibrate (see its README)."),
+        + ("" if real_clean else " — ⚠️ none yet. Synthetic renders (above) can't exhibit "
+           "the real-world false-positive defect; drop genuinely-compliant label *photos* into "
+           "`eval/images/real_clean/` to measure and calibrate against real artwork (see its README)."),
         f"- **Max latency:** {max_ms} ms (budget 5000 ms) "
         f"-> {'PASS' if max_ms < 5000 else 'FAIL'}",
         "",
         f"_Preprocessing (deskew + CLAHE contrast) lifts confident-correct verdicts on the "
         f"synthetic set from {off['conf_correct']}/{len(synthetic)} (OFF) to "
-        f"{on['conf_correct'] - len(INSCOPE_LABELS)}/{len(synthetic)} (ON)._",
+        f"{on_synth['conf_correct']}/{len(synthetic)} (ON)._",
     ]
 
     if stress_on:
