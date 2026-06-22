@@ -115,7 +115,7 @@ bash scripts/setup_ollama.sh                 # pulls llama3.2:3b; chat works onc
 pip install sentence-transformers            # then RAG_DENSE=auto enables it
 
 # run the tests + the evaluations
-pytest                                        # 342 passing
+pytest                                        # 446 passing
 python eval/run_eval.py                       # verifier decision board -> eval/REPORT.md
 python eval/run_rag_eval.py                   # RAG hit-rate / faithfulness / citation
 python eval/run_agent_eval.py gate            # agent-behavior gate (replay) -> eval/AGENT_REPORT.md
@@ -126,22 +126,24 @@ python eval/run_agent_eval.py gate            # agent-behavior gate (replay) -> 
 ## Tests and evaluation
 
 ```bash
-pytest                    # 342 passing unit + end-to-end tests
+pytest                    # 446 passing unit + end-to-end tests
 python eval/run_eval.py   # goal metrics + latency report -> eval/REPORT.md
 ```
 
 The goal is **< 1% margin of error, < 5 s latency**. The board scores the system on
 its **intended input** — the label image an agent submits with a COLA application —
-across 16 cases: 3 clean labels, 10 degraded variations (real photo/scan artifacts),
-and 3 varied product-label images. Each case is either a **confident verdict** or a
-**safe deferral**; the only failure is a *confident wrong* verdict.
+across 24 cases: 3 clean labels, 10 degraded variations (real photo/scan artifacts),
+3 varied product-label images, and 8 synthetic-clean calibration renders (varied
+brand/ABV, warning size, background tint, mild degradation). Each case is either a
+**confident verdict** or a **safe deferral**; the only failure is a *confident wrong* verdict.
 
-- **Confident coverage — 16/16 = 100%** — the system commits a verdict on every
-  in-scope case.
-- **Decision correctness — 16/16 = 100%**, **zero wrong verdicts**.
-- **Margin of error — 0.00%** (0 wrong of 16 confident verdicts). **Meets the < 1% goal.**
+- **Confident coverage — 23/24 = 95.8%** — commits a verdict on all but one case,
+  which it safely defers to NEEDS REVIEW rather than guess.
+- **Decision correctness — 24/24 = 100%**, **zero wrong verdicts** (23 confident-correct + 1 safe deferral).
+- **Margin of error — 0.00%** (0 wrong of 23 confident verdicts). **Meets the < 1% goal.**
+- **False-positive rate — 0.00%** (0 of 22 compliant labels confidently FLAGged).
 - **Logic-on-clean accuracy — 100%** (9/9 field decisions on cleanly-read text).
-- **Max latency — ~290 ms** (budget 5000 ms), well under the bar.
+- **Max latency — ~210 ms** (budget 5000 ms), well under the bar.
 
 Per-case outcomes on the degraded set (a ✗ cell is an OCR misread; the *outcome*
 is the decision the system made about it — all now confident-correct):
