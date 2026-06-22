@@ -1,6 +1,6 @@
 ---
 title: "feat: Agent Behavior Eval — record(live) → replay(gate) harness"
-status: active
+status: completed
 date: 2026-06-19
 depth: deep
 type: feat
