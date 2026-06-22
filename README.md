@@ -310,6 +310,10 @@ every change.
 
 ## Deploy
 
+> See **[`Infrastructure.md`](Infrastructure.md)** for the full operational picture —
+> runtime topology, the three deployment modes, persistence, the environment-variable
+> reference, security posture, and CI/CD.
+
 Docker bundles the Tesseract binary so it survives a locked-down runtime. The
 standard image ships all three layers — the button verifier plus the `/chat`
 panel and the BM25 RAG corpus — so the chat works wherever it's deployed; the LLM
