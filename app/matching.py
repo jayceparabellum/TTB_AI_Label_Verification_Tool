@@ -17,6 +17,7 @@ from dataclasses import dataclass
 
 from rapidfuzz import fuzz
 
+from .ocr import OCR_CONFIDENCE_THRESHOLD
 from .reference import OFFICIAL_GOVERNMENT_WARNING, WARNING_HEADER
 
 # --- Tunables (see PRD.md) ----------------------------------------------------
@@ -64,6 +65,12 @@ class FieldResult:
     # opposed to a confident pass/fail. Drives NEEDS REVIEW so the system never
     # confidently FLAGs something it couldn't actually read.
     inconclusive: bool = False
+    # Sub-classification of an inconclusive (REVIEW) outcome, so the reviewer is
+    # told *why* it deferred rather than a single generic message. For the
+    # government warning: "absent" (the label read clearly but no warning was
+    # found — it appears to be missing) vs "unreadable" (the warning region
+    # itself didn't OCR confidently). Empty for confident pass/fail outcomes.
+    review_kind: str = ""
 
 
 # --- Normalization helpers ----------------------------------------------------
@@ -259,7 +266,11 @@ def _all_official_words_present(window: str, norm_expected: str,
     return True
 
 
-def match_government_warning(ocr_text: str, expected: str = OFFICIAL_GOVERNMENT_WARNING) -> FieldResult:
+def match_government_warning(
+    ocr_text: str,
+    expected: str = OFFICIAL_GOVERNMENT_WARNING,
+    confidence: float = 100.0,
+) -> FieldResult:
     """Verify the government warning: strict on wording + ALL-CAPS casing, but
     tolerant of OCR noise, and DEFERRING (not flagging) when it can't be read.
 
@@ -268,30 +279,55 @@ def match_government_warning(ocr_text: str, expected: str = OFFICIAL_GOVERNMENT_
                 above the fuzzy threshold (a few characters of OCR noise are OK).
       * FLAG  — the warning is readable but genuinely wrong: header not in ALL
                 CAPS (Title case) or wording differs beyond the threshold.
-      * REVIEW (inconclusive) — the warning region didn't OCR at all (header not
-                found even case-insensitively); we can't assess it, so defer to a
-                human instead of confidently FLAGging a possibly-compliant label.
+      * REVIEW (inconclusive) — couldn't assess the warning, so defer to a human
+                rather than confidently FLAGging a possibly-compliant label. The
+                `review_kind` distinguishes *why*:
+                  - "absent": the label read clearly (mean OCR confidence at/above
+                    the trust threshold) yet no warning header was found anywhere —
+                    the warning appears to be genuinely missing.
+                  - "unreadable": the warning region didn't OCR confidently (no
+                    header trace on a marginal read, or a header whose body/casing
+                    couldn't be confirmed).
+
+    `confidence` is the mean OCR word confidence (0-100) for the read; it lets us
+    tell a genuinely-missing warning (trustworthy read, nothing there) apart from
+    one we simply couldn't read. We still DEFER rather than confidently FLAG an
+    "absent" warning: the mean confidence is a whole-image signal, and OCR can drop
+    a small-print warning region without lowering it, so a confident FLAG here could
+    false-flag a compliant label (the false-positive-rate invariant). The distinction
+    sharpens the reviewer's guidance; escalating "absent" to a confident FLAG needs
+    per-region confidence and real compliant-label calibration data (see README).
     """
     norm_ocr = normalize_whitespace(ocr_text)
     norm_expected = normalize_whitespace(expected)
     window = _warning_window(norm_ocr, norm_expected)
+    read_is_trustworthy = confidence >= OCR_CONFIDENCE_THRESHOLD
 
-    def _review(found: str, detail: str) -> FieldResult:
+    def _review(found: str, detail: str, kind: str) -> FieldResult:
         # Present-but-uncertain -> defer to a human. Never a confident FLAG, never PASS.
         return FieldResult(
             field="government_warning", label="Government warning", passed=False,
-            expected=expected, found=found, detail=detail, inconclusive=True)
+            expected=expected, found=found, detail=detail, inconclusive=True,
+            review_kind=kind)
 
     def _flag(found: str, detail: str) -> FieldResult:
         return FieldResult(
             field="government_warning", label="Government warning", passed=False,
             expected=expected, found=found, detail=detail)
 
-    # Region didn't OCR at all (header not found even case-insensitively) -> REVIEW.
+    # No warning header found anywhere (not even case-insensitively). Distinguish a
+    # genuinely-absent warning on a clearly-read label from an unreadable region.
     if window is None:
+        if read_is_trustworthy:
+            return _review(
+                "No government warning was found on this label — it appears to be missing.",
+                "label read clearly but no 'GOVERNMENT WARNING:' text was detected — "
+                "needs a human to confirm it is actually absent",
+                kind="absent")
         return _review(
             "The government warning couldn't be read on this image.",
-            "warning text not detected — needs a human to verify")
+            "warning text not detected on a low-confidence read — needs a human to verify",
+            kind="unreadable")
 
     has_allcaps_header = WARNING_HEADER in norm_ocr            # exact ALL CAPS
     similarity = fuzz.ratio(norm_expected, window)
@@ -314,7 +350,8 @@ def match_government_warning(ocr_text: str, expected: str = OFFICIAL_GOVERNMENT_
                 "Warning header is correct, but the wording couldn't be read clearly "
                 "enough to confirm — please verify by eye.",
                 f"close to 27 CFR 16.21 but below the confidence cutoff "
-                f"({similarity:.0f}% vs {WARNING_SIMILARITY_THRESHOLD:.0f}% needed)")
+                f"({similarity:.0f}% vs {WARNING_SIMILARITY_THRESHOLD:.0f}% needed)",
+                kind="unreadable")
         return _flag(
             "Header present, but the wording does not match the official text.",
             f"wording differs from 27 CFR 16.21 ({similarity:.0f}% similarity)")
@@ -334,7 +371,8 @@ def match_government_warning(ocr_text: str, expected: str = OFFICIAL_GOVERNMENT_
             "expected literal 'GOVERNMENT WARNING:' (all caps)")
     return _review(
         "The government warning header couldn't be read clearly — please verify by eye.",
-        "header region didn't OCR confidently — needs a human to verify")
+        "header region didn't OCR confidently — needs a human to verify",
+        kind="unreadable")
 
 
 # --- Net contents -------------------------------------------------------------

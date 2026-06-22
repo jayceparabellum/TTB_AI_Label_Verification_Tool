@@ -420,9 +420,16 @@ does not do:
   wording — but it *fuzzy-matches the body* (compliant reads score ≥ 99.6%), so a
   one-character OCR slip no longer false-FLAGs a compliant label. When the warning
   region can't be read at all, it **defers to NEEDS REVIEW** rather than asserting
-  non-compliance. (A genuinely-missing warning on a pristine image therefore also
-  defers — a conservative, never-false-pass choice; region-aware confidence to
-  separate "absent" from "unreadable" is a candidate next step.)
+  non-compliance. The deferral is now **region-aware**: the matcher uses the mean
+  OCR confidence to separate *absent* (the label read clearly yet carries no warning
+  — it appears genuinely missing) from *unreadable* (the warning region itself didn't
+  OCR), and the reviewer is told which one — an "absent" warning is surfaced as
+  "appears to be missing" with a non-compliance hint, not the misleading "appears to
+  be present". Both still **defer** rather than confidently FLAG: mean confidence is a
+  whole-image signal and OCR can drop a small-print warning region without lowering
+  it, so a confident "absent → FLAG" would risk false-flagging a compliant label.
+  Escalating "absent" to a confident FLAG remains a candidate next step, gated on
+  per-region OCR confidence and a calibrated set of genuinely-compliant label images.
 - **Real-world bottle photos often read poorly — and the app says so rather than
   guessing.** A glare-lit phone photo (small label in a busy frame, curved glass)
   can OCR to near-garbage. Two safeguards keep that honest: (1) when OCR confidence

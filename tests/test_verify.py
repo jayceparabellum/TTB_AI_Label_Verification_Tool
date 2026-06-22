@@ -173,6 +173,23 @@ def test_unreadable_warning_region_defers_to_review_at_high_confidence():
     assert r.overall_pass is False
 
 
+def test_warning_review_kind_threads_confidence_through_reverify():
+    # End-to-end: reverify_text's confidence reaches the warning matcher, so the same
+    # missing-warning text is classified "absent" on a trustworthy read and
+    # "unreadable" on a shaky one — without ever flipping to a confident verdict.
+    from app.verify import reverify_text
+
+    text = "Stone's Throw\nCraft Lager\nALC 5.0% BY VOL\n12 FL OZ"
+    warn = lambda res: next(f for f in res.fields if f.field == "government_warning")
+
+    clear = reverify_text(text, brand="Stone's Throw", alcohol_content="5.0", confidence=95.0)
+    assert warn(clear).review_kind == "absent"
+    assert warn(clear).inconclusive is True and warn(clear).passed is False
+
+    shaky = reverify_text(text, brand="Stone's Throw", alcohol_content="5.0", confidence=10.0)
+    assert warn(shaky).review_kind == "unreadable"
+
+
 def test_preprocessing_on_keeps_clean_verdicts_no_spurious_review():
     # Regression guard (U3): with OpenCV preprocessing on (default), a clean label
     # still passes all fields and is not pushed below the needs-review threshold.
