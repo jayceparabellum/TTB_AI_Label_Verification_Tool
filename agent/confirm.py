@@ -42,11 +42,27 @@ def confirm_gate(state: dict):
     if not write_calls:
         return Command(goto="tools")          # read-only: no confirmation needed
 
+    # Approving routes to ToolNode, which executes EVERY pending tool call — so if the
+    # model proposed more than one write in this turn, all of them run. Surface them
+    # ALL in the confirm payload so the human approves exactly what will execute, not
+    # just the first write. (`action`/`args` keep the single-write shape for clients
+    # that read them; `summary` and `actions` cover the full set.)
+    actions = [
+        {"action": c["name"], "args": c["args"], "summary": _summary(c, state)}
+        for c in write_calls
+    ]
+    if len(actions) == 1:
+        summary = actions[0]["summary"]
+    else:
+        listed = "; ".join(f"({i}) {a['summary']}" for i, a in enumerate(actions, 1))
+        summary = f"Approve {len(actions)} actions — {listed}"
+
     decision = interrupt({
         "type": "confirm",
         "action": write_calls[0]["name"],
         "args": write_calls[0]["args"],
-        "summary": _summary(write_calls[0], state),
+        "summary": summary,
+        "actions": actions,
     })
 
     if str(decision).strip().lower().startswith("approve"):
