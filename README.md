@@ -48,8 +48,9 @@ with no account or login.
 
 **From the browser (easiest).** On the running app, the samples are one click away:
 
-- On the home page (`/`), use the **"Verify the … sample"** chips to run a single
-  sample, or right-click → *Save image as* on any sample thumbnail to download it.
+- On the home page (`/`), each sample has a **⤓ Download sample** button (the
+  thumbnail is a download link too). Download one, drag it into the **1. Label photo**
+  box, and enter the brand and ABV listed on the card to run it.
 - On the batch page (`/batch`), scroll to the **"Try it with sample data"** card and
   click **⬇ Sample labels (.zip, 25 images)** and **⬇ Matching CSV** — then upload
   both back into the form above to see a full 25-label batch run end to end.
