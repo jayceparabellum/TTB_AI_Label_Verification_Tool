@@ -204,12 +204,12 @@ def verify_warning(state: Annotated[dict, InjectedState]) -> dict:
     if data is None:
         return {"error": _UNREADABLE}
     try:
-        text, _ = _ocr.extract_text_data(data)
+        text, conf = _ocr.extract_text_data(data)
     except _ocr.OcrReadError as exc:
         return {"error": "Couldn't read this image.", "detail": str(exc)}
-    r = _match_warning(text)
+    r = _match_warning(text, confidence=conf)
     return {"passed": r.passed, "found": r.found, "detail": r.detail,
-            "inconclusive": r.inconclusive}
+            "inconclusive": r.inconclusive, "review_kind": r.review_kind}
 
 
 @tool

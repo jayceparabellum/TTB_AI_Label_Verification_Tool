@@ -49,6 +49,47 @@ def test_no_warning_region_defers():
     assert r.passed is False and r.inconclusive is True
 
 
+def test_missing_warning_on_clear_read_classified_absent():
+    # A label that read clearly (high confidence) with no warning anywhere is
+    # classified "absent" — it appears genuinely missing. Still DEFERS (never a
+    # confident FLAG: mean confidence is a whole-image signal and can't prove the
+    # warning region itself wasn't dropped).
+    text = "Cedar Hollow\nCraft Lager\nALC 5.0% BY VOL\n12 FL OZ"
+    r = mw(text, confidence=92.0)
+    assert r.passed is False and r.inconclusive is True
+    assert r.review_kind == "absent"
+    assert "missing" in r.found.lower()
+
+
+def test_missing_warning_on_shaky_read_classified_unreadable():
+    # The same absence on a low-confidence read is "unreadable" — we can't trust
+    # that we'd have seen the warning, so it's a read problem, not a missing-warning
+    # finding.
+    text = "Cedar Hollow\nCraft Lager\nALC 5.0% BY VOL\n12 FL OZ"
+    r = mw(text, confidence=20.0)
+    assert r.passed is False and r.inconclusive is True
+    assert r.review_kind == "unreadable"
+
+
+def test_absent_classification_keys_off_the_ocr_trust_threshold():
+    # The split uses the OCR confidence floor as the single source of truth for
+    # "do we trust this read", so the warning matcher and the global needs-review
+    # signal agree on what "trustworthy" means.
+    from app.ocr import OCR_CONFIDENCE_THRESHOLD
+    text = "Cedar Hollow\nCraft Lager\nALC 5.0% BY VOL\n12 FL OZ"
+    assert mw(text, confidence=OCR_CONFIDENCE_THRESHOLD).review_kind == "absent"
+    assert mw(text, confidence=OCR_CONFIDENCE_THRESHOLD - 1).review_kind == "unreadable"
+
+
+def test_present_but_noisy_warning_is_unreadable_not_absent():
+    # A present-but-noisy warning (header intact, body below the cutoff) defers as
+    # "unreadable" — it's there but couldn't be confirmed, not missing.
+    noisy = W[:150] + "xxxxxx" + W[156:]
+    r = mw(noisy, confidence=92.0)
+    assert r.passed is False and r.inconclusive is True
+    assert r.review_kind == "unreadable"
+
+
 def test_dropped_negation_does_not_confidently_pass():
     # Regression (Six Sigma review): removing 'not' from "should not drink" inverts
     # the meaning but scores ~99% on character overlap. It must NOT confidently PASS

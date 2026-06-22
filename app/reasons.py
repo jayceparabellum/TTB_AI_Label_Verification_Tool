@@ -57,6 +57,26 @@ _REVIEW_REASONS = {
     ),
 }
 
+# Finer-grained review reasons keyed by (field, review_kind). When a matcher tags an
+# inconclusive result with a review_kind, prefer the matching message here over the
+# generic per-field one above — it tells the reviewer *why* it deferred.
+_REVIEW_REASONS_BY_KIND = {
+    ("government_warning", "absent"): (
+        "No Government Warning was found on this label, even though the rest of it "
+        "read clearly — it appears to be missing. Because the system never confidently "
+        "fails an item it might have misread, this is deferred for you to confirm by eye "
+        "rather than auto-failed.",
+        "Confirm by eye whether the label actually carries the §16.21 'GOVERNMENT "
+        "WARNING:' statement at all. If it is genuinely absent, the label is non-compliant.",
+    ),
+    ("government_warning", "unreadable"): (
+        "The Government Warning region didn't read clearly enough to confirm its wording "
+        "and casing, so it's deferred to a human rather than passed or failed.",
+        "Visually confirm the label carries the exact §16.21 statement with the "
+        "ALL-CAPS 'GOVERNMENT WARNING:' header.",
+    ),
+}
+
 _GENERIC_REVIEW = (
     "This field couldn't be read confidently from the image, so it's deferred to a "
     "human instead of being passed or failed.",
@@ -70,7 +90,9 @@ def explain(field: FieldResult) -> dict | None:
         return None
 
     if field.inconclusive:
-        reason, what = _REVIEW_REASONS.get(field.field, _GENERIC_REVIEW)
+        reason, what = _REVIEW_REASONS_BY_KIND.get(
+            (field.field, field.review_kind),
+            _REVIEW_REASONS.get(field.field, _GENERIC_REVIEW))
         status = "REVIEW"
     else:
         reason, what = _FLAG_REASONS.get(

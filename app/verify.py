@@ -43,6 +43,7 @@ def verify_fields(
     expected_warning: str = OFFICIAL_GOVERNMENT_WARNING,
     net_contents: str = "",
     class_type: str = "",
+    confidence: float = 100.0,
 ) -> list[FieldResult]:
     """Run the field matchers against already-extracted OCR text.
 
@@ -51,13 +52,18 @@ def verify_fields(
     supplied — an omitted field is never FLAGged, so the optional fields can't
     regress a label that didn't claim them.
 
+    `confidence` is the mean OCR word confidence for this read; it lets the
+    warning matcher tell a genuinely-absent warning (trustworthy read, nothing
+    found) from one it simply couldn't read. Defaults to a trusted value so
+    text-only callers behave as before.
+
     Shared by the first-pass verify (after OCR) and re-check (which reuses the
     same text), so both decide identically — re-check never re-OCRs.
     """
     fields = [
         match_brand(brand, text),
         match_alcohol_content(alcohol_content, text),
-        match_government_warning(text, expected_warning),
+        match_government_warning(text, expected_warning, confidence=confidence),
     ]
     if net_contents and net_contents.strip():
         fields.append(match_net_contents(net_contents, text))
@@ -123,7 +129,8 @@ def reverify_text(
     """
     start = time.perf_counter()
     fields = verify_fields(text, brand, alcohol_content, expected_warning,
-                           net_contents=net_contents, class_type=class_type)
+                           net_contents=net_contents, class_type=class_type,
+                           confidence=confidence)
     return VerificationResult(
         readable=True,
         fields=fields,
@@ -157,7 +164,8 @@ def verify_label(
         return _unreadable_result(start, text)
 
     fields = verify_fields(text, brand, alcohol_content, expected_warning,
-                           net_contents=net_contents, class_type=class_type)
+                           net_contents=net_contents, class_type=class_type,
+                           confidence=confidence)
 
     return VerificationResult(
         readable=True,
