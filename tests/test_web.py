@@ -28,7 +28,11 @@ def test_index_has_dropzone_and_script():
     html = client.get("/").text
     assert 'id="dropzone"' in html
     assert "/static/upload.js" in html
-    assert html.count("Check this sample") == 3
+    # Samples are downloadable (drag into the upload box), not server-checked inline.
+    assert "Check this sample" not in html
+    assert html.count("Download sample") == 3
+    for key in ("clean_pass", "abv_mismatch", "bad_warning"):
+        assert f'download="{key}.png"' in html
 
 
 # --- U2: thumbnail on results --------------------------------------------------

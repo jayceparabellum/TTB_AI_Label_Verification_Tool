@@ -60,17 +60,28 @@
   </form>
 
   <section class="samples">
-    <h2>Or try a sample label</h2>
+    <h2>Or download a sample label to try</h2>
+    <p class="hint">
+      Download a sample below, then drag it into the <strong>1. Label photo</strong>
+      box above (or click to choose it) and enter the listed brand and ABV. Each
+      sample is built to demonstrate one outcome.
+    </p>
     <div class="sample-grid">
       {% for s in samples %}
-      <form action="/verify-sample/{{ s.key }}" method="post" class="sample">
-        <img src="/static/samples/{{ s.filename }}" alt="{{ s.title }}">
+      <div class="sample">
+        <a href="/static/samples/{{ s.filename }}" download="{{ s.filename }}"
+           title="Download {{ s.filename }}">
+          <img src="/static/samples/{{ s.filename }}" alt="{{ s.title }}">
+        </a>
         <div class="sample-body">
           <strong>{{ s.title }}</strong>
           <span class="sample-blurb">{{ s.blurb }}</span>
-          <button type="submit" class="btn-secondary">Check this sample</button>
+          <span class="sample-hint">To test, enter brand
+            <code>{{ s.brand }}</code> and ABV <code>{{ s.alcohol_content }}</code>.</span>
+          <a class="btn-secondary" href="/static/samples/{{ s.filename }}"
+             download="{{ s.filename }}">⤓ Download sample</a>
         </div>
-      </form>
+      </div>
       {% endfor %}
     </div>
   </section>

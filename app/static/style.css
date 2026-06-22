@@ -125,12 +125,14 @@ textarea.mono { font-family: var(--mono); font-size: .98rem; }
 /* --- Samples --- */
 .sample-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 .sample {
-  display: flex; gap: 16px; align-items: center; background: var(--surface);
+  display: flex; gap: 16px; align-items: flex-start; background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--r); padding: 16px; box-shadow: var(--shadow-sm);
 }
-.sample img { width: 130px; height: auto; border: 1px solid var(--border); border-radius: var(--r-sm); }
-.sample-body { display: flex; flex-direction: column; gap: 9px; flex: 1; }
+.sample img { width: 130px; height: auto; border: 1px solid var(--border); border-radius: var(--r-sm); display: block; }
+.sample-body { display: flex; flex-direction: column; gap: 9px; flex: 1; align-items: flex-start; }
 .sample-blurb { color: var(--muted); font-size: .95rem; }
+.sample-hint { font-size: .9rem; color: var(--muted); }
+.sample-hint code { background: var(--surface-2, #eef2f7); padding: 1px 6px; border-radius: var(--r-sm); font-family: var(--mono); }
 @media (min-width: 620px) { .sample-grid { grid-template-columns: 1fr 1fr; } }
 
 /* --- Result --- */
