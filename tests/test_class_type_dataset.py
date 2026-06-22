@@ -50,3 +50,24 @@ def test_every_cited_section_is_ecfr_verified():
         assert sec in verified, f"§{sec} not in the eCFR-verified snapshot"
         assert verified[sec]["part"] == e["part"], (
             f"§{sec} is part {verified[sec]['part']}, not {e['part']}")
+
+
+def test_optional_abv_envelopes_are_well_formed_and_cited():
+    # The compositional ABV envelope is OPTIONAL; where present it must be a sane,
+    # eCFR-verified bound (no fabricated numbers, no inverted ranges).
+    verified = json.loads(_VERIFIED.read_text())["sections"]
+    found_any = False
+    for e in _entries():
+        lo, hi = e.get("abv_min"), e.get("abv_max")
+        if lo is None and hi is None:
+            assert "composition_section" not in e, e  # no orphan comp section
+            continue
+        found_any = True
+        for v in (lo, hi):
+            if v is not None:
+                assert isinstance(v, (int, float)) and 0 < v <= 100, e
+        if lo is not None and hi is not None:
+            assert lo <= hi, f"inverted ABV envelope {e}"
+        comp_sec = e.get("composition_section", e["section"])
+        assert comp_sec in verified, f"composition §{comp_sec} not eCFR-verified ({e})"
+    assert found_any, "expected at least one entry to carry an ABV envelope"

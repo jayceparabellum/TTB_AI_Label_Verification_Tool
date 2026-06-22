@@ -210,3 +210,56 @@ def test_recognized_spirits_class_type_passes_when_present():
              + OFFICIAL_GOVERNMENT_WARNING)
     r = reverify_text(label, "Old Reserve", "45", class_type="Bourbon")
     assert _class_field(r).passed                          # spirits recognized + present
+
+
+# --- compositional ABV advisory surfaced in validate_class_type --------------
+# ADVISORY only: an out-of-range ABV adds a REVIEW advisory with a citation but never
+# turns the tool result into a rejection; in-range/absent ABV is OK or skipped.
+
+def test_validate_class_type_in_range_abv_is_ok():
+    from agent.tools import validate_class_type
+    out = validate_class_type.invoke(
+        {"claimed_designation": "Bourbon", "beverage_type": "spirits",
+         "claimed_abv": "45"})
+    assert out["advisory"] is True and out["status"] == "OK"
+    assert out["composition"]["status"] == "OK"
+    assert out["composition"]["citation"]["section"] == "5.143"
+    assert "reject" not in str(out).lower() or "auto-rejection" in str(out).lower()
+
+
+def test_validate_class_type_out_of_range_abv_adds_review_never_reject():
+    from agent.tools import validate_class_type
+    out = validate_class_type.invoke(
+        {"claimed_designation": "Bourbon", "beverage_type": "spirits",
+         "claimed_abv": "35"})           # below the 40% spirits floor
+    assert out["advisory"] is True
+    assert out["status"] == "REVIEW"     # escalated OK -> REVIEW
+    assert out["status"] not in {"FAIL", "FLAG", "REJECT"}
+    comp = out["composition"]
+    assert comp["status"] == "REVIEW" and comp["advisory"] is True
+    assert comp["citation"]["section"] == "5.143"
+    assert "never an auto-rejection" in comp["assessment"]
+
+
+def test_validate_class_type_proof_value_is_understood():
+    from agent.tools import validate_class_type
+    # 78 proof = 39% ABV, below the 40% whisky floor -> REVIEW.
+    out = validate_class_type.invoke(
+        {"claimed_designation": "Whisky", "claimed_abv": "78 proof"})
+    assert out["composition"]["status"] == "REVIEW"
+
+
+def test_validate_class_type_skips_composition_without_abv():
+    from agent.tools import validate_class_type
+    out = validate_class_type.invoke(
+        {"claimed_designation": "Bourbon", "beverage_type": "spirits"})
+    assert "composition" not in out      # no ABV claimed -> no-op, no flag
+    assert out["advisory"] is True
+
+
+def test_validate_class_type_skips_composition_for_class_without_bound():
+    from agent.tools import validate_class_type
+    # 'Vodka' is recognized but carries no cited ABV envelope -> skipped.
+    out = validate_class_type.invoke(
+        {"claimed_designation": "Vodka", "claimed_abv": "5"})
+    assert "composition" not in out and out["advisory"] is True
