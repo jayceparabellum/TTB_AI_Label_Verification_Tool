@@ -10,6 +10,7 @@ RAG tools arrive in later units.
 from __future__ import annotations
 
 import base64
+import re
 from typing import Annotated
 
 from langchain_core.tools import tool
@@ -330,13 +331,34 @@ def verify_audit_log() -> dict:
             "message": v.message}
 
 
+_PROOF_RE = re.compile(r"(\d+(?:\.\d+)?)\s*proof", re.I)
+
+
+def _claimed_abv_percent(claimed_abv: str) -> float | None:
+    """Parse a reviewer-entered alcohol value to percent ABV, understanding proof
+    (= 2 x ABV) so '90 proof' -> 45.0 and '45'/'45%' -> 45.0. Empty/none -> None."""
+    if not claimed_abv:
+        return None
+    m = _PROOF_RE.search(claimed_abv)
+    if m:
+        return float(m.group(1)) / 2.0
+    m = re.search(r"\d+(?:\.\d+)?", claimed_abv)
+    return float(m.group()) if m else None
+
+
 @tool
-def validate_class_type(claimed_designation: str, beverage_type: str = "") -> dict:
+def validate_class_type(claimed_designation: str, beverage_type: str = "",
+                        claimed_abv: str = "") -> dict:
     """Assess a claimed class/type designation against the standards of identity for
     wine (27 CFR part 4) and distilled spirits (part 5) — ADVISORY ONLY (status OK or
     REVIEW), never an automatic rejection. The OK/REVIEW decision is grounded in the
     recognized-designations dataset; a controlling citation is returned; a human decides.
-    Pass beverage_type ('wine'|'spirits') to disambiguate; otherwise it is inferred."""
+    Pass beverage_type ('wine'|'spirits') to disambiguate; otherwise it is inferred.
+    Pass claimed_abv (e.g. '45', '45%', '90 proof') to additionally run an ADVISORY
+    ABV/proof floor-and-ceiling check against the class's cited envelope: an out-of-range
+    ABV escalates the advisory to REVIEW with the controlling citation — never a
+    rejection. The composition check is silently skipped (no 'composition' key) when no
+    ABV is given, the class carries no cited ABV bound, or the designation is unrecognized."""
     from rag import generate
     from app import standards
 
@@ -345,11 +367,26 @@ def validate_class_type(claimed_designation: str, beverage_type: str = "") -> di
         "class type designation",
         f"{beverage_type or rec.beverage_type or ''} {claimed_designation}".strip())
     citations = grounded.get("citations", [])
-    if rec.recognized:
-        return {"status": "OK", "advisory": True, "citations": citations,
-                "assessment": rec.message}
-    return {"status": "REVIEW", "advisory": True, "citations": citations,
-            "assessment": rec.message + " This is advisory; it is never an auto-rejection."}
+    out = {
+        "status": "OK" if rec.recognized else "REVIEW",
+        "advisory": True,
+        "citations": citations,
+        "assessment": rec.message if rec.recognized else (
+            rec.message + " This is advisory; it is never an auto-rejection."),
+    }
+
+    # Additive ADVISORY compositional ABV/proof check. A no-op (no ABV, no cited bound,
+    # or unrecognized) adds nothing; an out-of-range ABV escalates OK -> REVIEW but is
+    # never a confident rejection (KTD2 / zero-confident-wrong).
+    comp = standards.check_composition(
+        claimed_designation, _claimed_abv_percent(claimed_abv),
+        beverage_type=beverage_type or None)
+    if comp.checked:
+        out["composition"] = {"status": comp.status, "citation": comp.citation,
+                              "assessment": comp.message, "advisory": True}
+        if comp.status == "REVIEW":
+            out["status"] = "REVIEW"
+    return out
 
 
 READ_TOOLS = [verify_label, verify_text, extract_label_fields, verify_warning,
