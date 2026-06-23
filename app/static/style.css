@@ -110,24 +110,6 @@ textarea.mono { font-family: var(--mono); font-size: .98rem; }
 }
 .mode-link:hover { border-color: var(--accent); color: var(--accent); }
 
-/* --- Home hub: three big actions --- */
-.hub-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 28px;
-}
-.hub-card {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 16px;
-  min-height: 220px; padding: 40px 36px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-lg); box-shadow: var(--shadow); text-decoration: none;
-  color: var(--ink); transition: 150ms ease;
-}
-.hub-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
-.hub-card:focus-visible { outline: none; box-shadow: var(--ring); }
-.hub-icon { font-size: 3rem; line-height: 1; }
-.hub-label { font-size: 2.1rem; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
-.hub-desc { font-size: 1.2rem; line-height: 1.4; color: var(--ink-soft); }
-@media (max-width: 640px) { .hub-grid { grid-template-columns: 1fr; } }
-
 /* --- Dropzone + preview --- */
 .dropzone {
   display: flex; flex-direction: column; align-items: center; gap: 14px;
