@@ -25,7 +25,7 @@ def _ocr_text(key, brand="Stone's Throw", abv="5.0"):
 
 # --- U1: upload screen ---------------------------------------------------------
 def test_index_has_dropzone_and_script():
-    html = client.get("/single").text
+    html = client.get("/").text
     assert 'id="dropzone"' in html
     assert "/static/upload.js" in html
     # Samples are downloadable (drag into the upload box), not server-checked inline.
