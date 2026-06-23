@@ -57,7 +57,12 @@ async def _security_headers(request: Request, call_next):
 
 
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request):
+def home(request: Request):
+    return templates.TemplateResponse(request, "home.html", {"nav": "home"})
+
+
+@app.get("/single", response_class=HTMLResponse)
+def single_form(request: Request):
     return templates.TemplateResponse(
         request,
         "index.html",

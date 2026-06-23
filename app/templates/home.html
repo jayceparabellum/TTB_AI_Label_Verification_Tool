@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}TTB Label Verification{% endblock %}
+{% block content %}
+  <h1>Verify an alcohol label</h1>
+  <p class="lead">
+    Check the brand name, alcohol content, and government warning on alcohol
+    labels, then see a clear result. Pick how you want to start.
+  </p>
+
+  <section class="hub-grid" aria-label="Ways to verify a label">
+    <a class="hub-card" href="/single">
+      <span class="hub-icon" aria-hidden="true">📷</span>
+      <span class="hub-label">Single</span>
+      <span class="hub-desc">Verify one label from a photo.</span>
+    </a>
+    <a class="hub-card" href="/text">
+      <span class="hub-icon" aria-hidden="true">⌨</span>
+      <span class="hub-label">Text</span>
+      <span class="hub-desc">No photo? Paste the label text.</span>
+    </a>
+    <a class="hub-card" href="/batch">
+      <span class="hub-icon" aria-hidden="true">▦</span>
+      <span class="hub-label">Batch</span>
+      <span class="hub-desc">Verify many labels from a CSV + images.</span>
+    </a>
+  </section>
+
+  <footer class="foot">Proof of concept. Processing is local; nothing you upload is stored.</footer>
+{% endblock %}
